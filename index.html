@@ -163,6 +163,9 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
       <option value="custom">My own receiver (URL below)</option>
     </select></label></div>
     <div style="grid-column:1/-1"><label>FlyItalyADSB API key (planes + routes; free at flyitalyadsb.com)<input id="fFia" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label><div id="fiaStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
+    <div style="grid-column:1/-1"><label>AeroDataBox RapidAPI key (backup route lookup for the card plane)<input id="fAdb" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
+      <div style="display:flex;gap:2vh;margin-top:.8vh"><label style="flex:1">Max lookups / day<input id="fAdbD" type="number" min="0"></label><label style="flex:1">Max lookups / month<input id="fAdbM" type="number" min="0"></label></div>
+      <div id="adbStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
     <div style="grid-column:1/-1"><label>Own receiver URL (optional &ndash; e.g. http://192.168.1.50/tar1090/data/aircraft.json)<input id="fCustom" placeholder="http://raspberrypi.local/tar1090/data/aircraft.json"></label></div>
     <div><label>Satellite map brightness (0&ndash;100, 0 = off)<input id="fSat" type="number" min="0" max="100" step="5"></label></div>
     <div><label>&ldquo;LOOK UP!&rdquo; alert distance (miles, 0 = off)<input id="fAlert" type="number" min="0" max="10" step="0.5"></label></div>
@@ -187,10 +190,10 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.7';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.8';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
-var DEFAULTS={fiaKey:'',fiaCap:290000,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
+var DEFAULTS={fiaKey:'',fiaCap:290000,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
 function loadSettings(){
   var s={},k;for(k in DEFAULTS)s[k]=DEFAULTS[k];
   try{var raw=localStorage.getItem('overhead.settings');if(raw){var o=JSON.parse(raw);for(k in o)if(k in s)s[k]=o[k];}}catch(e){}
@@ -202,6 +205,7 @@ function loadSettings(){
   if(q.get('source'))s.source=q.get('source');
   if(q.get('custom'))s.custom=q.get('custom');
   if(q.get('fiaKey'))s.fiaKey=q.get('fiaKey');
+  if(q.get('adbKey'))s.adbKey=q.get('adbKey');
   // settings pushed from /sdcard/overhead-config.json (read by the loader) always win
   var cfg=window.__OVERHEAD_CONFIG;
   if(cfg&&typeof cfg==='object')for(k in cfg)if(k in s)s[k]=cfg[k];
@@ -539,6 +543,62 @@ function fiaUsual(cs){
   });
   return FIA_USUAL[cs];
 }
+/* ---------------- AeroDataBox (RapidAPI) - live flight status by aircraft, card plane only ----------------
+   Free plan: 400 units / 1,600 requests a month (hard limits); a status lookup is a TIER 2 call.
+   Capped per day and per month; any quota/limit reply pauses it until tomorrow. */
+var ADBU={};try{ADBU=JSON.parse(localStorage.getItem('overhead.adbUsage')||'{}')||{};}catch(e){ADBU={};}
+function adbU(){var d=todayStr(),m=d.slice(0,7);if(ADBU.month!==m){ADBU.month=m;ADBU.m=0;}if(ADBU.day!==d){ADBU.day=d;ADBU.n=0;}return ADBU;}
+function saveAdbU(){try{localStorage.setItem('overhead.adbUsage',JSON.stringify(ADBU));}catch(e){}}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function adbUsable(){var u=adbU();return !!S.adbKey&&Date.now()>=(u.pausedUntil||0)&&u.n<S.adbDay&&u.m<S.adbMonth;}
+var ADB={};try{ADB=JSON.parse(localStorage.getItem('overhead.adbRoutes')||'{}')||{};}catch(e){ADB={};}
+for(var _a in ADB)if(ADB[_a].pending)delete ADB[_a];
+var adbBusy=false;
+function adbKey(p){return p.hex+'|'+(p.cs||'');}
+function adbFor(p,allowLookup){
+  var k=adbKey(p),c=ADB[k];
+  if(c&&(c.pending||Date.now()-c.t<8*3600e3))return c;      // found or not found: don't pay twice
+  if(!allowLookup||adbBusy||!adbUsable()||DEMO)return null;
+  adbBusy=true;ADB[k]={t:Date.now(),pending:true};
+  var u=adbU();u.n++;u.m++;saveAdbU();
+  var ctl=(typeof AbortController!=='undefined')?new AbortController():null,
+      opts={headers:{'X-RapidAPI-Key':S.adbKey,'X-RapidAPI-Host':'aerodatabox.p.rapidapi.com','Accept':'application/json'}};
+  if(ctl)opts.signal=ctl.signal;
+  var t=setTimeout(function(){if(ctl)ctl.abort();},12000);
+  function done(v){clearTimeout(t);adbBusy=false;v.t=Date.now();ADB[k]=v;
+    try{var ks=Object.keys(ADB);if(ks.length>300)ks.sort(function(a,b){return ADB[a].t-ADB[b].t;}).slice(0,ks.length-200).forEach(function(x){delete ADB[x];});
+      localStorage.setItem('overhead.adbRoutes',JSON.stringify(ADB));}catch(e){}
+    renderPanel();}
+  fetch('https://aerodatabox.p.rapidapi.com/flights/icao24/'+encodeURIComponent(p.hex)+'?withAircraftImage=false&withLocation=false',opts).then(function(r){
+    var left=parseInt(r.headers.get('x-ratelimit-units-remaining')||r.headers.get('x-ratelimit-requests-remaining'),10);
+    if(!isNaN(left)&&left<2){u.pausedUntil=nextMidnight();u.why='monthly quota used up';saveAdbU();}
+    if(r.status===429||r.status===403||r.status===401){
+      return r.text().then(function(b){
+        var monthly=/month|quota|subscri|key/i.test(b)||r.status!==429;
+        u.pausedUntil=monthly?nextMidnight():Date.now()+60e3;u.why=monthly?(r.status===429?'out of quota':'key refused'):'rate limited';saveAdbU();
+        done({st:'err'});ADB[k].t=Date.now()-8*3600e3+5*60e3;   // let it be retried in 5 min if another service frees up
+      });
+    }
+    if(r.status===204||r.status===404){done({st:'none'});return;}
+    if(!r.ok){done({st:'err'});ADB[k].t=Date.now()-8*3600e3+10*60e3;return;}
+    return r.json().then(function(list){
+      list=Array.isArray(list)?list:[list];
+      var live=/enroute|departed|approaching|boarding|gateclosed|delayed/i;
+      var f=list.filter(function(x){return live.test(String(x.status||'').replace(/\s/g,''));})[0]||
+            list.filter(function(x){return x.departure&&(x.departure.actualTime||x.departure.revisedTime)&&!(x.arrival&&x.arrival.actualTime);})[0];
+      if(!f||!f.departure||!f.arrival||!f.departure.airport||!f.arrival.airport){done({st:'none'});return;}
+      function ap(a){var i=apInfo(a.icao||a.iata);var loc=a.location||{};
+        return {code:a.iata||(i&&i.code)||a.icao,city:a.municipalityName||(i&&i.city)||a.shortName||a.name||'',
+                lat:loc.lat!=null?loc.lat:(i&&i.lat),lon:loc.lon!=null?loc.lon:(i&&i.lon)};}
+      var o=ap(f.departure.airport),d=ap(f.arrival.airport);
+      if(o.lat==null||d.lat==null){done({st:'none'});return;}
+      done({st:'ok',leg:{o:o.code,oc:o.city,olat:o.lat,olon:o.lon,d:d.code,dc:d.city,dlat:d.lat,dlon:d.lon},
+            airline:(f.airline&&f.airline.name)||'',iata:(f.airline&&f.airline.iata)||''});
+    });
+  }).catch(function(){done({st:'err'});ADB[k].t=Date.now()-8*3600e3+10*60e3;});
+  return ADB[k];
+}
+
 /* What route does the card show?  FlyItalyADSB usual route that fits the plane -> (only when
    FlyItalyADSB isn't in use) the free community DB -> "Route unknown". No guessing. */
 function routeInfo(p,allowLookup){
@@ -553,11 +613,20 @@ function routeInfo(p,allowLookup){
         if(L2&&legFits(L2,p)){res.leg=L2;res.src='FlyItalyADSB';return res;}}
       res.pending=!!(u&&u.pending)||(!u&&allowLookup&&fiaUsable());
     }
-    return res;
+    if(res.pending)return res;               // wait for FlyItalyADSB before spending AeroDataBox units
+    return adbStep(p,allowLookup,res);
   }
   var rc=routeFor(p.cs),rt=rc&&rc.st==='ok'?rc.d:null;res.rc=rc;res.rt=rt;
+  res=adbStep(p,allowLookup,res);if(res.leg||res.pending)return res;
   var l2=pickLeg(rt,p);if(l2){res.leg=l2;res.src='community DB';}
   else res.pending=!!routePending[p.cs];
+  return res;
+}
+function adbStep(p,allowLookup,res){
+  if(p.ground)return res;
+  var a=adbFor(p,allowLookup);
+  if(a&&a.st==='ok'&&legFits(a.leg,p)){res.leg=a.leg;res.src='AeroDataBox';if(a.airline)res.rt={airline:a.airline,iata:a.iata};}
+  else if(a&&a.pending)res.pending=true;
   return res;
 }
 
@@ -923,7 +992,8 @@ $('ver').textContent='v'+APP_VERSION+(LOADER_BASE?' (via loader)':'');
 function openSettings(){
   $('fName').value=S.name||'';$('fLat').value=S.lat==null?'':S.lat;$('fLon').value=S.lon==null?'':S.lon;
   $('fRad').value=S.radius;$('fRef').value=S.refresh;$('fSrc').value=S.source;$('fCustom').value=S.custom||'';$('fGround').checked=!!S.ground;
-  $('fAlert').value=S.alertMi;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';
+  $('fAlert').value=S.alertMi;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
+  var au=adbU();$('adbStat').textContent=S.adbKey?('Used today '+au.n+' / '+S.adbDay+' \u00b7 this month '+au.m+' / '+S.adbMonth+(Date.now()<(au.pausedUntil||0)?' \u00b7 paused ('+au.why+') until '+new Date(au.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 skipped.';
   var fu=fiaU();$('fiaStat').textContent=S.fiaKey?('Used this month: '+fmtInt(fu.m)+' / '+fmtInt(S.fiaCap)+(Date.now()<(fu.pausedUntil||0)?' \u00b7 paused ('+fu.why+') until '+new Date(fu.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 using adsb.lol / adsb.fi and the community route database.';
   $('bClose').style.display=S.lat==null?'none':'';$('geoMsg').textContent='';
   $('settings').style.display='block';
@@ -950,6 +1020,8 @@ $('bSave').onclick=function(){
   S.source=$('fSrc').value;S.custom=$('fCustom').value.trim();S.ground=$('fGround').checked;
   var al=parseFloat($('fAlert').value);S.alertMi=isNaN(al)?1.5:Math.max(0,Math.min(10,al));
   S.anim=$('fAnim').checked;S.chime=$('fChime').checked;S.dim=$('fDim').checked;
+  var ak=$('fAdb').value.trim();if(ak!==S.adbKey){S.adbKey=ak;var au2=adbU();au2.pausedUntil=0;au2.why='';saveAdbU();ADB={};}
+  S.adbDay=Math.max(0,parseInt($('fAdbD').value,10)||0);S.adbMonth=Math.max(0,parseInt($('fAdbM').value,10)||0);
   var nk=$('fFia').value.trim();if(nk!==S.fiaKey){S.fiaKey=nk;var fu2=fiaU();fu2.pausedUntil=0;fu2.why='';saveFiaU();}
   var sv=parseFloat($('fSat').value);S.sat=isNaN(sv)?45:Math.max(0,Math.min(100,sv));mapKey='';
   if(S.chime)chime(); // unlocks audio on Android with a user tap

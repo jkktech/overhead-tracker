@@ -3,8 +3,6 @@
 A PlaneSlate-style "what's flying over my house" display for a jailbroken Amazon Echo Show 5
 (LineageOS + Fully Kiosk Browser), or any browser. Single HTML file, free data sources only:
 
-- Aircraft positions: adsb.lol / adsb.fi (or your own tar1090 receiver)
-- Routes: adsb.lol routeset + adsbdb, sanity-checked against the plane's position
 - Satellite imagery: Esri World Imagery
 
 ## Install on the Echo
@@ -20,6 +18,24 @@ downloads the latest tracker from GitHub Pages and runs it as a local page.
 4. Enter your latitude/longitude on first launch.
 
 The loader caches the last downloaded copy, so the display still works if GitHub is unreachable.
+
+## API keys (set remotely, never committed)
+Copy `overhead-config.example.json` to `overhead-config.json`, put your keys in it, and push it next to the loader:
+
+    adb push overhead-config.json /sdcard/overhead-config.json
+
+Values in this file override what's typed on the Echo's settings screen. It's read each time the loader
+starts, so restart Fully Kiosk (or reboot) after pushing. Supported keys include `fiaKey`, `adbKey`,
+`adbDay`, `adbMonth`, plus any other setting (`lat`, `lon`, `name`, `radius`, ...).
+
+## Data sources
+- Planes: FlyItalyADSB (key, 30 req/min, 300k/month - polled every >= 10 s), falling back to adsb.lol / adsb.fi.
+- Routes for the card plane, in order - each must fit the plane's actual position/climb/descent:
+  1. FlyItalyADSB usual route, then every route that callsign flew in the last 14 days
+  2. AeroDataBox live status by aircraft (capped: 6/day, 190/month; pauses until tomorrow on any quota reply)
+  3. Free community route DB (only when FlyItalyADSB isn't available)
+  4. Otherwise "Route unknown" - no guessing.
+- Airport coordinates: `airports.json`, built from OurAirports by `tools/mk_airports.py`.
 
 ## Releasing an update
 Edit `index.html`, then run `./release.sh`. The page checks `version.json` every 30 minutes
