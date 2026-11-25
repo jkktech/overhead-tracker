@@ -164,7 +164,10 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
       <option value="custom">My own receiver (URL below)</option>
     </select></label></div>
     <div style="grid-column:1/-1"><label>FlyItalyADSB API key (route lookups for the big card; free at flyitalyadsb.com)<input id="fFia" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label><div id="fiaStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
-    <div style="grid-column:1/-1"><label>AeroDataBox RapidAPI key (backup route lookup for the card plane)<input id="fAdb" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
+    <div style="grid-column:1/-1"><label>AirLabs API key (2nd route lookup for the card plane)<input id="fAl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
+      <div style="display:flex;gap:2vh;margin-top:.8vh"><label style="flex:1">Max lookups / day<input id="fAlD" type="number" min="0"></label><label style="flex:1">Max lookups / month<input id="fAlM" type="number" min="0"></label></div>
+      <div id="alStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
+    <div style="grid-column:1/-1"><label>AeroDataBox RapidAPI key (3rd route lookup for the card plane)<input id="fAdb" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
       <div style="display:flex;gap:2vh;margin-top:.8vh"><label style="flex:1">Max lookups / day<input id="fAdbD" type="number" min="0"></label><label style="flex:1">Max lookups / month<input id="fAdbM" type="number" min="0"></label></div>
       <div id="adbStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
     <div style="grid-column:1/-1"><label>Own receiver URL (optional &ndash; e.g. http://192.168.1.50/tar1090/data/aircraft.json)<input id="fCustom" placeholder="http://raspberrypi.local/tar1090/data/aircraft.json"></label></div>
@@ -191,10 +194,10 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.10';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.11';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
-var DEFAULTS={fiaKey:'',fiaCap:290000,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
+var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:30,alMonth:950,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
 function loadSettings(){
   var s={},k;for(k in DEFAULTS)s[k]=DEFAULTS[k];
   try{var raw=localStorage.getItem('overhead.settings');if(raw){var o=JSON.parse(raw);for(k in o)if(k in s)s[k]=o[k];}}catch(e){}
@@ -207,6 +210,7 @@ function loadSettings(){
   if(q.get('custom'))s.custom=q.get('custom');
   if(q.get('fiaKey'))s.fiaKey=q.get('fiaKey');
   if(q.get('adbKey'))s.adbKey=q.get('adbKey');
+  if(q.get('alKey'))s.alKey=q.get('alKey');
   // settings pushed from /sdcard/overhead-config.json (read by the loader) always win
   var cfg=window.__OVERHEAD_CONFIG;
   if(cfg&&typeof cfg==='object')for(k in cfg)if(k in s)s[k]=cfg[k];
@@ -539,60 +543,125 @@ function fiaUsual(cs){
   });
   return FIA_USUAL[cs];
 }
-/* ---------------- AeroDataBox (RapidAPI) - live flight status by aircraft, card plane only ----------------
-   Free plan: 400 units / 1,600 requests a month (hard limits); a status lookup is a TIER 2 call.
-   Capped per day and per month; any quota/limit reply pauses it until tomorrow. */
-var ADBU={};try{ADBU=JSON.parse(localStorage.getItem('overhead.adbUsage')||'{}')||{};}catch(e){ADBU={};}
-function adbU(){var d=todayStr(),m=d.slice(0,7);if(ADBU.month!==m){ADBU.month=m;ADBU.m=0;}if(ADBU.day!==d){ADBU.day=d;ADBU.n=0;}return ADBU;}
-function saveAdbU(){try{localStorage.setItem('overhead.adbUsage',JSON.stringify(ADBU));}catch(e){}}
+/* ---------------- keyed route services: AirLabs, then AeroDataBox (card plane only) ----------------
+   Both look the plane up by its transponder code (works for charters/cargo too). Each has a daily and
+   monthly cap; a quota/limit/key reply pauses that service until tomorrow. Answers are cached 8 h per
+   aircraft+callsign so a flight is never paid for twice. */
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
-function adbUsable(){var u=adbU();return !!S.adbKey&&Date.now()>=(u.pausedUntil||0)&&u.n<S.adbDay&&u.m<S.adbMonth;}
-var ADB={};try{ADB=JSON.parse(localStorage.getItem('overhead.adbRoutes')||'{}')||{};}catch(e){ADB={};}
-for(var _a in ADB)if(ADB[_a].pending)delete ADB[_a];
-var adbBusy=false;
-function adbKey(p){return p.hex+'|'+(p.cs||'');}
-function adbFor(p,allowLookup){
-  var k=adbKey(p),c=ADB[k];
-  if(c&&(c.pending||Date.now()-c.t<8*3600e3))return c;      // found or not found: don't pay twice
-  if(!allowLookup||adbBusy||!adbUsable()||DEMO)return null;
-  adbBusy=true;ADB[k]={t:Date.now(),pending:true};
-  var u=adbU();u.n++;u.m++;saveAdbU();
-  var ctl=(typeof AbortController!=='undefined')?new AbortController():null,
-      opts={headers:{'X-RapidAPI-Key':S.adbKey,'X-RapidAPI-Host':'aerodatabox.p.rapidapi.com','Accept':'application/json'}};
+var SVU={};try{SVU=JSON.parse(localStorage.getItem('overhead.svcUsage2')||'{}')||{};}catch(e){SVU={};}
+if(!SVU.adb){try{var _o=JSON.parse(localStorage.getItem('overhead.adbUsage')||'null');if(_o)SVU.adb=_o;}catch(e){}}
+function svcU(id){var u=SVU[id]||(SVU[id]={}),d=todayStr(),m=d.slice(0,7);if(u.month!==m){u.month=m;u.m=0;}if(u.day!==d){u.day=d;u.n=0;}return u;}
+function saveSvcU(){try{localStorage.setItem('overhead.svcUsage2',JSON.stringify(SVU));}catch(e){}}
+function svcUsable(d){var u=svcU(d.id);return !!S[d.key]&&Date.now()>=(u.pausedUntil||0)&&u.n<S[d.day]&&u.m<S[d.month];}
+function svcPause(d,until,why){var u=svcU(d.id);u.pausedUntil=until;u.why=why;saveSvcU();}
+function svcFetch(url,headers){
+  var ctl=(typeof AbortController!=='undefined')?new AbortController():null,opts={headers:headers||{}};
   if(ctl)opts.signal=ctl.signal;
   var t=setTimeout(function(){if(ctl)ctl.abort();},12000);
-  function done(v){clearTimeout(t);adbBusy=false;v.t=Date.now();ADB[k]=v;
-    try{var ks=Object.keys(ADB);if(ks.length>300)ks.sort(function(a,b){return ADB[a].t-ADB[b].t;}).slice(0,ks.length-200).forEach(function(x){delete ADB[x];});
-      localStorage.setItem('overhead.adbRoutes',JSON.stringify(ADB));}catch(e){}
-    renderPanel();}
-  fetch('https://aerodatabox.p.rapidapi.com/flights/icao24/'+encodeURIComponent(p.hex)+'?withAircraftImage=false&withLocation=false',opts).then(function(r){
+  return fetch(url,opts).then(function(r){clearTimeout(t);return r;},function(e){clearTimeout(t);throw e;});
+}
+function airlineFromIcao(icao){var a=AIRLINES[icao||''];return a?{name:a[0],iata:a[1]}:{name:'',iata:''};}
+
+/* AirLabs: live flights filtered by aircraft hex. Free plan = 1,000 queries/month. */
+function alCall(p,key){
+  var url='https://airlabs.co/api/v9/flights?hex='+encodeURIComponent(p.hex.toUpperCase())+'&api_key='+encodeURIComponent(key)+
+          '&_fields=hex,flight_icao,dep_iata,dep_icao,arr_iata,arr_icao,airline_icao,airline_iata,status';
+  return svcFetch(url,{'Accept':'application/json'}).then(function(r){
+    if(r.status===429)throw {pause:Date.now()+60e3,why:'rate limited'};
+    return r.json();
+  }).then(function(j){
+    if(j&&j.error){
+      var t=((j.error.code||'')+' '+(j.error.message||'')).toLowerCase();
+      if(/minute|second|hour/.test(t))throw {pause:Date.now()+60e3,why:'rate limited'};
+      if(/limit|quota|credit|exceed|plan|expire/.test(t))throw {pause:nextMidnight(),why:'out of quota'};
+      if(/key|auth|token|access/.test(t))throw {pause:nextMidnight(),why:'key refused'};
+      return {st:'none'};
+    }
+    var f=((j&&j.response)||[])[0];
+    if(!f)return {st:'none'};
+    var L=legFromCodes(f.dep_iata||f.dep_icao,f.arr_iata||f.arr_icao);
+    if(!L)return {st:'none'};
+    var al=airlineFromIcao(f.airline_icao);
+    return {st:'ok',leg:L,airline:al.name,iata:f.airline_iata||al.iata};
+  });
+}
+
+/* AeroDataBox (RapidAPI): flight status by aircraft icao24. Free plan = 400 units / 1,600 requests a month. */
+function adbCall(p,key){
+  return svcFetch('https://aerodatabox.p.rapidapi.com/flights/icao24/'+encodeURIComponent(p.hex)+'?withAircraftImage=false&withLocation=false',
+    {'X-RapidAPI-Key':key,'X-RapidAPI-Host':'aerodatabox.p.rapidapi.com','Accept':'application/json'}).then(function(r){
     var left=parseInt(r.headers.get('x-ratelimit-units-remaining')||r.headers.get('x-ratelimit-requests-remaining'),10);
-    if(!isNaN(left)&&left<2){u.pausedUntil=nextMidnight();u.why='monthly quota used up';saveAdbU();}
+    if(!isNaN(left)&&left<2)svcPause(SVC_BY.adb,nextMidnight(),'monthly quota used up');
     if(r.status===429||r.status===403||r.status===401){
       return r.text().then(function(b){
-        var monthly=/month|quota|subscri|key/i.test(b)||r.status!==429;
-        u.pausedUntil=monthly?nextMidnight():Date.now()+60e3;u.why=monthly?(r.status===429?'out of quota':'key refused'):'rate limited';saveAdbU();
-        done({st:'err'});ADB[k].t=Date.now()-8*3600e3+5*60e3;   // let it be retried in 5 min if another service frees up
+        if(r.status===429&&!/month|quota/i.test(b))throw {pause:Date.now()+60e3,why:'rate limited'};
+        throw {pause:nextMidnight(),why:r.status===429?'out of quota':'key refused'};
       });
     }
-    if(r.status===204||r.status===404){done({st:'none'});return;}
-    if(!r.ok){done({st:'err'});ADB[k].t=Date.now()-8*3600e3+10*60e3;return;}
+    if(r.status===204||r.status===404)return {st:'none'};
+    if(!r.ok)throw {retry:true};
     return r.json().then(function(list){
       list=Array.isArray(list)?list:[list];
       var live=/enroute|departed|approaching|boarding|gateclosed|delayed/i;
       var f=list.filter(function(x){return live.test(String(x.status||'').replace(/\s/g,''));})[0]||
             list.filter(function(x){return x.departure&&(x.departure.actualTime||x.departure.revisedTime)&&!(x.arrival&&x.arrival.actualTime);})[0];
-      if(!f||!f.departure||!f.arrival||!f.departure.airport||!f.arrival.airport){done({st:'none'});return;}
+      if(!f||!f.departure||!f.arrival||!f.departure.airport||!f.arrival.airport)return {st:'none'};
       function ap(a){var i=apInfo(a.icao||a.iata);var loc=a.location||{};
         return {code:a.iata||(i&&i.code)||a.icao,city:a.municipalityName||(i&&i.city)||a.shortName||a.name||'',
                 lat:loc.lat!=null?loc.lat:(i&&i.lat),lon:loc.lon!=null?loc.lon:(i&&i.lon)};}
       var o=ap(f.departure.airport),d=ap(f.arrival.airport);
-      if(o.lat==null||d.lat==null){done({st:'none'});return;}
-      done({st:'ok',leg:{o:o.code,oc:o.city,olat:o.lat,olon:o.lon,d:d.code,dc:d.city,dlat:d.lat,dlon:d.lon},
-            airline:(f.airline&&f.airline.name)||'',iata:(f.airline&&f.airline.iata)||''});
+      if(o.lat==null||d.lat==null)return {st:'none'};
+      return {st:'ok',leg:{o:o.code,oc:o.city,olat:o.lat,olon:o.lon,d:d.code,dc:d.city,dlat:d.lat,dlon:d.lon},
+              airline:(f.airline&&f.airline.name)||'',iata:(f.airline&&f.airline.iata)||''};
     });
-  }).catch(function(){done({st:'err'});ADB[k].t=Date.now()-8*3600e3+10*60e3;});
-  return ADB[k];
+  });
+}
+
+var SVCS=[
+  {id:'airlabs',name:'AirLabs',key:'alKey',day:'alDay',month:'alMonth',call:alCall},
+  {id:'adb',name:'AeroDataBox',key:'adbKey',day:'adbDay',month:'adbMonth',call:adbCall}
+];
+var SVC_BY={};SVCS.forEach(function(d){SVC_BY[d.id]=d;});
+var SVR={};try{SVR=JSON.parse(localStorage.getItem('overhead.svcRoutes')||'{}')||{};}catch(e){SVR={};}
+SVCS.forEach(function(d){var m=SVR[d.id]||(SVR[d.id]={});for(var k in m)if(m[k].pending)delete m[k];});
+var svcBusy=false;
+function saveSvcR(){
+  try{SVCS.forEach(function(d){var m=SVR[d.id],ks=Object.keys(m);if(ks.length>300)ks.sort(function(a,b){return m[a].t-m[b].t;}).slice(0,ks.length-200).forEach(function(x){delete m[x];});});
+    localStorage.setItem('overhead.svcRoutes',JSON.stringify(SVR));}catch(e){}
+}
+function svcCached(d,p){var c=SVR[d.id][p.hex+'|'+(p.cs||'')];return c&&(c.pending||Date.now()-c.t<8*3600e3)?c:null;}
+function svcLookup(d,p){
+  var k=p.hex+'|'+(p.cs||''),u=svcU(d.id);
+  svcBusy=true;SVR[d.id][k]={t:Date.now(),pending:true};
+  u.n++;u.m++;saveSvcU();
+  function done(v,age){svcBusy=false;v.t=Date.now()-(age||0);SVR[d.id][k]=v;saveSvcR();renderPanel();}
+  d.call(p,S[d.key]).then(function(v){done(v||{st:'none'});},function(e){
+    if(e&&e.pause){svcPause(d,e.pause,e.why);done({st:'err'},8*3600e3);}   // not cached: next service gets a turn now
+    else done({st:'err'},8*3600e3-10*60e3);                                // network trouble: try this one again in 10 min
+  });
+}
+/* Walk the services in order. Only move on when the previous one has answered or can't be used. */
+function svcStep(p,allowLookup,res){
+  if(p.ground)return res;
+  for(var i=0;i<SVCS.length;i++){
+    var d=SVCS[i],c=svcCached(d,p);
+    if(c){
+      if(c.pending){res.pending=true;return res;}
+      if(c.st==='ok'&&legFits(c.leg,p)){res.leg=c.leg;res.src=d.name;if(c.airline)res.rt={airline:c.airline,iata:c.iata};return res;}
+      continue;                                    // answered "not found" (or a route that doesn't fit)
+    }
+    if(!svcUsable(d))continue;
+    if(!allowLookup)return res;
+    if(svcBusy){res.pending=true;return res;}
+    svcLookup(d,p);res.pending=true;return res;
+  }
+  return res;
+}
+function svcStatusText(d){
+  if(!S[d.key])return 'No key – skipped.';
+  var u=svcU(d.id),t='Used today '+u.n+' / '+S[d.day]+' · this month '+u.m+' / '+S[d.month];
+  if(Date.now()<(u.pausedUntil||0))t+=' · paused ('+u.why+') until '+new Date(u.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'});
+  return t;
 }
 
 /* What route does the card show?  FlyItalyADSB usual route that fits the plane -> (only when
@@ -610,21 +679,13 @@ function routeInfo(p,allowLookup){
     }
     if((u&&u.pending)||(!u&&allowLookup&&fiaUsable())){res.pending=true;return res;}   // wait before spending AeroDataBox units
   }
-  if(airline){res=adbStep(p,allowLookup,res);if(res.leg||res.pending)return res;}
+  if(airline){res=svcStep(p,allowLookup,res);if(res.leg||res.pending)return res;}
   if(fiaAnswered)return res;                 // FlyItalyADSB answered but nothing fits: "Route unknown", no guessing
   var rc=routeFor(p.cs),rt=rc&&rc.st==='ok'?rc.d:null;res.rc=rc;res.rt=rt;
   var l2=pickLeg(rt,p);if(l2){res.leg=l2;res.src='community DB';}
   else res.pending=!!routePending[p.cs];
   return res;
 }
-function adbStep(p,allowLookup,res){
-  if(p.ground)return res;
-  var a=adbFor(p,allowLookup);
-  if(a&&a.st==='ok'&&legFits(a.leg,p)){res.leg=a.leg;res.src='AeroDataBox';if(a.airline)res.rt={airline:a.airline,iata:a.iata};}
-  else if(a&&a.pending)res.pending=true;
-  return res;
-}
-
 /* ---------------- local airport inference (free, no lookups) ----------------
    Low + climbing + flying away from a nearby airport  => just departed it.
    Low + descending + pointed at a nearby airport       => arriving there. */
@@ -1044,7 +1105,8 @@ function openSettings(){
   $('fName').value=S.name||'';$('fLat').value=S.lat==null?'':S.lat;$('fLon').value=S.lon==null?'':S.lon;
   $('fRad').value=S.radius;$('fRef').value=S.refresh;$('fSrc').value=S.source;$('fCustom').value=S.custom||'';$('fGround').checked=!!S.ground;
   $('fAlert').value=S.alertMi;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
-  var au=adbU();$('adbStat').textContent=S.adbKey?('Used today '+au.n+' / '+S.adbDay+' \u00b7 this month '+au.m+' / '+S.adbMonth+(Date.now()<(au.pausedUntil||0)?' \u00b7 paused ('+au.why+') until '+new Date(au.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 skipped.';
+  $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;
+  $('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
   var fu=fiaU();$('fiaStat').textContent=S.fiaKey?('Used this month: '+fmtInt(fu.m)+' / '+fmtInt(S.fiaCap)+(Date.now()<(fu.pausedUntil||0)?' \u00b7 paused ('+fu.why+') until '+new Date(fu.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 using adsb.lol / adsb.fi and the community route database.';
   $('bClose').style.display=S.lat==null?'none':'';$('geoMsg').textContent='';
   $('settings').style.display='block';
@@ -1071,7 +1133,9 @@ $('bSave').onclick=function(){
   S.source=$('fSrc').value;S.custom=$('fCustom').value.trim();S.ground=$('fGround').checked;
   var al=parseFloat($('fAlert').value);S.alertMi=isNaN(al)?1.5:Math.max(0,Math.min(10,al));
   S.anim=$('fAnim').checked;S.chime=$('fChime').checked;S.dim=$('fDim').checked;
-  var ak=$('fAdb').value.trim();if(ak!==S.adbKey){S.adbKey=ak;var au2=adbU();au2.pausedUntil=0;au2.why='';saveAdbU();ADB={};}
+  var ak=$('fAdb').value.trim();if(ak!==S.adbKey){S.adbKey=ak;svcPause(SVC_BY.adb,0,'');SVR.adb={};saveSvcR();}
+  var lk=$('fAl').value.trim();if(lk!==S.alKey){S.alKey=lk;svcPause(SVC_BY.airlabs,0,'');SVR.airlabs={};saveSvcR();}
+  S.alDay=Math.max(0,parseInt($('fAlD').value,10)||0);S.alMonth=Math.max(0,parseInt($('fAlM').value,10)||0);
   S.adbDay=Math.max(0,parseInt($('fAdbD').value,10)||0);S.adbMonth=Math.max(0,parseInt($('fAdbM').value,10)||0);
   var nk=$('fFia').value.trim();if(nk!==S.fiaKey){S.fiaKey=nk;var fu2=fiaU();fu2.pausedUntil=0;fu2.why='';saveFiaU();}
   var sv=parseFloat($('fSat').value);S.sat=isNaN(sv)?45:Math.max(0,Math.min(100,sv));mapKey='';
