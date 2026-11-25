@@ -13,12 +13,15 @@
    Lives on the Echo as /sdcard/overhead.html and is opened by Fully Kiosk as a local file.
    It downloads the latest tracker from GitHub and runs it here, so the page keeps the
    local-file data access (which the free flight-data sites need) AND gets automatic updates.
-   If GitHub can't be reached, it runs the last copy it downloaded. */
+   If GitHub can't be reached, it runs the last copy it downloaded.
+   Optional: /sdcard/overhead-config.json with settings such as {"fiaKey":"..."} - these
+   override what's set on the screen, so keys can be changed remotely with adb. */
 (function(){
   var BASE='https://jkktech.github.io/overhead-tracker/';
   var KEY='overhead.loaderCache';
+  var CONFIG=null;   // optional settings file next to this one: overhead-config.json
   function run(html){
-    var inject='<script>window.__OVERHEAD_BASE='+JSON.stringify(BASE)+';<\/script>';
+    var inject='<script>window.__OVERHEAD_BASE='+JSON.stringify(BASE)+';window.__OVERHEAD_CONFIG='+JSON.stringify(CONFIG)+';<\/script>';
     html=html.replace(/<head([^>]*)>/i,function(m){return m+inject;});
     document.open();document.write(html);document.close();
   }
@@ -28,6 +31,19 @@
     document.getElementById('msg').innerHTML='Can&rsquo;t download Overhead from GitHub ('+why+').<br>Retrying in 30 seconds&hellip;';
     setTimeout(function(){location.reload();},30000);
   }
+  function readConfig(cb){
+    try{
+      var x=new XMLHttpRequest();
+      x.open('GET','overhead-config.json?t='+Date.now(),true);
+      x.onload=x.onerror=function(){
+        try{if(x.responseText)CONFIG=JSON.parse(x.responseText);}catch(e){CONFIG=null;}
+        cb();
+      };
+      x.send();
+    }catch(e){cb();}
+  }
+  readConfig(start);
+  function start(){
   var done=false,timer=setTimeout(function(){if(!done){done=true;fallback('timed out');}},15000);
   fetch(BASE+'index.html?t='+Date.now(),{cache:'no-store'}).then(function(r){
     if(!r.ok)throw new Error('HTTP '+r.status);return r.text();
@@ -36,6 +52,7 @@
     try{localStorage.setItem(KEY,html);}catch(e){}
     run(html);
   },function(e){if(done)return;done=true;clearTimeout(timer);fallback(e.message||'offline');});
+  }
 })();
 </script>
 </body>
