@@ -185,7 +185,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.5';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.6';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -425,6 +425,12 @@ function legFits(L,p){
   if(dO+dD>len*1.2+40)return false;                        // too far off the path between the airports
   if(!p.ground&&dD<40&&p.vr>600)return false;              // climbing out near this "destination" = it just left it
   if(!p.ground&&dO<40&&p.vr<-600&&dD>60)return false;      // descending near this "origin" = it's landing there
+  // low and descending = landing somewhere close; a destination far away can't be right
+  if(!p.ground&&p.alt!=null&&p.alt<8000&&p.vr<-300&&dD>60)return false;
+  // low and climbing = just took off somewhere close; an origin far away can't be right
+  if(!p.ground&&p.alt!=null&&p.alt<8000&&p.vr>300&&dO>60)return false;
+  // very low (pattern/approach altitude) with no clear climb or descent: must be near one end
+  if(!p.ground&&p.alt!=null&&p.alt<3000&&dO>40&&dD>40)return false;
   if(p.trk!=null&&p.gs!=null&&p.gs>100&&!p.ground&&dO>25&&dD>30){
     var diff=Math.abs(((p.trk-bearing(p.plat,p.plon,L.dlat,L.dlon))+540)%360-180);
     if(diff>80)return false;                                 // flying away from the destination
