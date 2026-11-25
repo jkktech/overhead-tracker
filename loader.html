@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Overhead</title>
+<style>html,body{margin:0;height:100%;background:#03050a;color:#8592a3;font:4vh Roboto,Arial,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}</style>
+</head>
+<body>
+<div id="msg">Loading Overhead&hellip;</div>
+<script>
+/* Overhead loader.
+   Lives on the Echo as /sdcard/overhead.html and is opened by Fully Kiosk as a local file.
+   It downloads the latest tracker from GitHub and runs it here, so the page keeps the
+   local-file data access (which the free flight-data sites need) AND gets automatic updates.
+   If GitHub can't be reached, it runs the last copy it downloaded. */
+(function(){
+  var BASE='https://jkktech.github.io/overhead-tracker/';
+  var KEY='overhead.loaderCache';
+  function run(html){
+    var inject='<script>window.__OVERHEAD_BASE='+JSON.stringify(BASE)+';<\/script>';
+    html=html.replace(/<head([^>]*)>/i,function(m){return m+inject;});
+    document.open();document.write(html);document.close();
+  }
+  function fallback(why){
+    var cached=null;try{cached=localStorage.getItem(KEY);}catch(e){}
+    if(cached){run(cached);return;}
+    document.getElementById('msg').innerHTML='Can&rsquo;t download Overhead from GitHub ('+why+').<br>Retrying in 30 seconds&hellip;';
+    setTimeout(function(){location.reload();},30000);
+  }
+  var done=false,timer=setTimeout(function(){if(!done){done=true;fallback('timed out');}},15000);
+  fetch(BASE+'index.html?t='+Date.now(),{cache:'no-store'}).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);return r.text();
+  }).then(function(html){
+    if(done)return;done=true;clearTimeout(timer);
+    try{localStorage.setItem(KEY,html);}catch(e){}
+    run(html);
+  },function(e){if(done)return;done=true;clearTimeout(timer);fallback(e.message||'offline');});
+})();
+</script>
+</body>
+</html>

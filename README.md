@@ -8,9 +8,18 @@ A PlaneSlate-style "what's flying over my house" display for a jailbroken Amazon
 - Satellite imagery: Esri World Imagery
 
 ## Install on the Echo
-1. Enable GitHub Pages for this repo (Settings -> Pages -> Deploy from branch -> `main` / root).
-2. In Fully Kiosk, set **Start URL** to `https://jkktech.github.io/overhead-tracker/`
-3. Enter your latitude/longitude on first launch.
+The free flight-data sites don't allow web pages hosted elsewhere (like github.io) to read their data,
+but Fully Kiosk lets a *local file* through. So the Echo runs a tiny local loader that
+downloads the latest tracker from GitHub Pages and runs it as a local page.
+
+1. GitHub Pages enabled for this repo (Settings -> Pages -> `main` / root).
+2. `adb push loader.html /sdcard/overhead.html`
+3. Fully Kiosk **Start URL**: `file:///sdcard/overhead.html`
+   (Fully Kiosk -> Web Content Settings: "Enable File Access" and
+   "Allow Universal Access from File URLs" must be on.)
+4. Enter your latitude/longitude on first launch.
+
+The loader caches the last downloaded copy, so the display still works if GitHub is unreachable.
 
 ## Releasing an update
 Edit `index.html`, then run `./release.sh`. The page checks `version.json` every 30 minutes

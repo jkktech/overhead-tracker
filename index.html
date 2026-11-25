@@ -186,7 +186,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.2';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.3';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -790,17 +790,19 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden)keep
 /* ---------------- auto-update (when served from GitHub Pages / any web host) ----------------
    Every 30 min, fetch version.json next to this page. If its version differs, reload
    with a cache-busting ?v= so the Echo picks up the new file. Settings are kept. */
+var LOADER_BASE=window.__OVERHEAD_BASE||'';   // set when started by the local loader file
 function checkUpdate(){
-  if(!/^https?:$/.test(location.protocol))return;   // local file:// copy can't self-update
-  fetchJSON('version.json?t='+Date.now(),8000,{cache:'no-store'}).then(function(j){
+  if(!LOADER_BASE&&!/^https?:$/.test(location.protocol))return;   // plain local copy can't self-update
+  fetchJSON(LOADER_BASE+'version.json?t='+Date.now(),8000,{cache:'no-store'}).then(function(j){
     if(j&&j.version&&j.version!==APP_VERSION){
+      if(LOADER_BASE){location.reload();return;}        // loader re-downloads the latest page
       var q=new URLSearchParams(location.search);q.set('v',j.version);
       location.replace(location.pathname+'?'+q.toString());
     }
   },function(){});
 }
 setTimeout(checkUpdate,60000);setInterval(checkUpdate,30*60e3);
-$('ver').textContent='v'+APP_VERSION;
+$('ver').textContent='v'+APP_VERSION+(LOADER_BASE?' (via loader)':'');
 
 /* ---------------- settings UI ---------------- */
 function openSettings(){
