@@ -157,12 +157,11 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
     <div><label>Refresh every (seconds)<input id="fRef" type="number" min="5" max="120"></label></div>
     <div><label>Flight data source<select id="fSrc">
       <option value="auto">Automatic (best available)</option>
-      <option value="fia">FlyItalyADSB (needs key)</option>
       <option value="adsblol">adsb.lol</option>
       <option value="adsbfi">adsb.fi</option>
       <option value="custom">My own receiver (URL below)</option>
     </select></label></div>
-    <div style="grid-column:1/-1"><label>FlyItalyADSB API key (planes + routes; free at flyitalyadsb.com)<input id="fFia" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label><div id="fiaStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
+    <div style="grid-column:1/-1"><label>FlyItalyADSB API key (route lookups for the big card; free at flyitalyadsb.com)<input id="fFia" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label><div id="fiaStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
     <div style="grid-column:1/-1"><label>AeroDataBox RapidAPI key (backup route lookup for the card plane)<input id="fAdb" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
       <div style="display:flex;gap:2vh;margin-top:.8vh"><label style="flex:1">Max lookups / day<input id="fAdbD" type="number" min="0"></label><label style="flex:1">Max lookups / month<input id="fAdbM" type="number" min="0"></label></div>
       <div id="adbStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
@@ -190,7 +189,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.8';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.9';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -213,7 +212,7 @@ function loadSettings(){
 }
 function saveSettings(){try{localStorage.setItem('overhead.settings',JSON.stringify(S));}catch(e){}}
 var S=loadSettings();
-if(S.source==='airplaneslive')S.source='auto';   // airplanes.live API now requires feeding
+if(S.source==='airplaneslive'||S.source==='fia')S.source='auto';   // airplanes.live API now requires feeding
 var DEMO=/[?&]demo=1/.test(location.search);
 if(DEMO&&(S.lat==null||isNaN(S.lat))){S.lat=41.8781;S.lon=-87.6298;S.name='Demo';}
 
@@ -268,8 +267,9 @@ var routePending={}, routeQueue=[], routeActive=0;
 var alerted={}, alertTimer=null;
 
 /* ---------------- data sources ---------------- */
-/* FlyItalyADSB: 30 req/min per key, 300k/month, radius in km (max 500).
-   Every request is counted; a 429 pauses it (Retry-After, or until tomorrow for the monthly quota). */
+/* FlyItalyADSB - used ONLY for route lookups of the big-card plane (planes come from adsb.lol/adsb.fi).
+   Limits: 30 req/min per key, 300k/month. Every request is counted; a 429 pauses it
+   (Retry-After, or until tomorrow for the monthly quota). */
 var FIAU={};try{FIAU=JSON.parse(localStorage.getItem('overhead.fiaUsage')||'{}')||{};}catch(e){FIAU={};}
 function fiaU(){var m=new Date().toISOString().slice(0,7);if(FIAU.month!==m){FIAU={month:m,m:0,pausedUntil:FIAU.pausedUntil||0,why:FIAU.why||''};}return FIAU;}
 function saveFiaU(){try{localStorage.setItem('overhead.fiaUsage',JSON.stringify(FIAU));}catch(e){}}
@@ -294,14 +294,12 @@ function fiaGet(path){
     return r.json();
   },function(e){clearTimeout(t);throw e;});
 }
-var FIA_PROVIDER={id:'fia',name:'FlyItalyADSB',fia:true};
 var PROVIDERS=[
   {id:'adsblol',name:'adsb.lol',url:function(la,lo,nm){return 'https://api.adsb.lol/v2/point/'+la+'/'+lo+'/'+nm;}},
   {id:'adsbfi',name:'adsb.fi',url:function(la,lo,nm){return 'https://opendata.adsb.fi/api/v2/lat/'+la+'/lon/'+lo+'/dist/'+nm;}}
 ];
 function radiusNm(){return Math.min(250,Math.ceil(S.radius*0.869+2));}
 var srcFail={};   // provider id -> consecutive failures
-var fiaLive=false; // true when the current planes came from FlyItalyADSB
 function why(e){
   if(e&&e.status)return 'HTTP '+e.status+(e.status===429?' (too many requests)':(e.status===403?' (refused)':''));
   if(e&&e.name==='AbortError')return 'timed out';
@@ -314,9 +312,7 @@ function fetchAircraft(){
       function(e){throw new Error('Your receiver: '+why(e));});
   }
   var chosen=null,order=[],i;
-  if(S.source==='fia'||S.source==='auto'){
-    if(fiaUsable())order.push(FIA_PROVIDER);
-    else if(S.source==='fia')chosen=FIA_PROVIDER;     // shows "(FlyItalyADSB unavailable)"
+  if(S.source==='auto'){
     for(i=0;i<PROVIDERS.length;i++)order.push(PROVIDERS[(providerIdx+i)%PROVIDERS.length]);
   }else{
     chosen=PROVIDERS.filter(function(p){return p.id===S.source;})[0]||null;
@@ -330,12 +326,10 @@ function fetchAircraft(){
   function attempt(k){
     if(k>=order.length)return Promise.reject(new Error(errs.join(' · ')));
     var p=order[k];
-    var req=p.fia?fiaGet('/v2/lat/'+la+'/lon/'+lo+'/dist/'+Math.min(500,Math.ceil(S.radius*1.609+3))+'?with=route')
-                 :fetchJSON(p.url(la,lo,nm),9000,{headers:{'Accept':'application/json'}});
-    return req.then(function(j){
-      srcFail[p.id]=0;fiaLive=!!p.fia;
+    return fetchJSON(p.url(la,lo,nm),9000,{headers:{'Accept':'application/json'}}).then(function(j){
+      srcFail[p.id]=0;
       srcName=p.name+(chosen&&p!==chosen?' ('+chosen.name+' unavailable)':'');
-      if(!chosen&&!p.fia)providerIdx=PROVIDERS.indexOf(p);
+      if(!chosen)providerIdx=PROVIDERS.indexOf(p);
       return j.ac||j.aircraft||[];
     },function(e){srcFail[p.id]=(srcFail[p.id]||0)+1;errs.push(p.name+': '+why(e));return attempt(k+1);});
   }
@@ -388,7 +382,6 @@ function ingest(list){
     p.vr=a.baro_rate!=null?a.baro_rate:(a.geom_rate!=null?a.geom_rate:0);
     p.lat=a.lat;p.lon=a.lon;
     p.t0=now-((a.seen_pos||0)*1000);
-    p.froute=a.route||null;
     var last=p.trail[p.trail.length-1];
     if(!last||last[0]!==a.lat||last[1]!==a.lon){p.trail.push([a.lat,a.lon]);if(p.trail.length>24)p.trail.shift();}
     seen[hex]=1;
@@ -534,9 +527,9 @@ function fiaUsual(cs){
   fiaGet('/v2/flights/callsign/'+encodeURIComponent(cs)+'?days=14').then(function(j){
     var list=(j&&j.usual)||[];
     list.sort(function(a,b){return (b.count||0)-(a.count||0);});
-    return list;
-  },function(){return [];}).then(function(list){
-    fiaUsualBusy=false;FIA_USUAL[cs]={t:Date.now(),list:list};
+    return {ok:true,list:list};
+  },function(e){return {ok:!!(e&&e.status===404),list:[]};}).then(function(r){
+    fiaUsualBusy=false;FIA_USUAL[cs]={t:r.ok?Date.now():Date.now()-6*3600e3+10*60e3,list:r.list,ok:r.ok};   // failures retried in 10 min
     try{var k=Object.keys(FIA_USUAL);if(k.length>300)k.sort(function(a,b){return FIA_USUAL[a].t-FIA_USUAL[b].t;}).slice(0,k.length-200).forEach(function(x){delete FIA_USUAL[x];});
       localStorage.setItem('overhead.fiaUsual',JSON.stringify(FIA_USUAL));}catch(e){}
     renderPanel();
@@ -604,20 +597,19 @@ function adbFor(p,allowLookup){
 function routeInfo(p,allowLookup){
   var res={leg:null,src:'',pending:false,rt:null,rc:null};
   if(!p.cs)return res;
-  if(fiaLive){
-    var r=p.froute;
-    if(r){var L=legFromCodes(r.from_iata||r.from,r.to_iata||r.to);if(L&&legFits(L,p)){res.leg=L;res.src='FlyItalyADSB';return res;}}
-    if(/^[A-Z]{3}\d/.test(p.cs)){
-      var u=allowLookup?fiaUsual(p.cs):FIA_USUAL[p.cs];
-      if(u&&u.list)for(var i=0;i<u.list.length;i++){var x=u.list[i],L2=legFromCodes(x.from_iata||x.from,x.to_iata||x.to);
-        if(L2&&legFits(L2,p)){res.leg=L2;res.src='FlyItalyADSB';return res;}}
-      res.pending=!!(u&&u.pending)||(!u&&allowLookup&&fiaUsable());
+  var airline=/^[A-Z]{3}\d/.test(p.cs),fiaAnswered=false;
+  if(S.fiaKey&&airline){
+    var u=allowLookup?fiaUsual(p.cs):FIA_USUAL[p.cs];
+    if(u&&u.list){
+      fiaAnswered=u.ok!==false;
+      for(var i=0;i<u.list.length;i++){var x=u.list[i],L=legFromCodes(x.from_iata||x.from,x.to_iata||x.to);
+        if(L&&legFits(L,p)){res.leg=L;res.src='FlyItalyADSB';return res;}}
     }
-    if(res.pending)return res;               // wait for FlyItalyADSB before spending AeroDataBox units
-    return adbStep(p,allowLookup,res);
+    if((u&&u.pending)||(!u&&allowLookup&&fiaUsable())){res.pending=true;return res;}   // wait before spending AeroDataBox units
   }
+  if(airline){res=adbStep(p,allowLookup,res);if(res.leg||res.pending)return res;}
+  if(fiaAnswered)return res;                 // FlyItalyADSB answered but nothing fits: "Route unknown", no guessing
   var rc=routeFor(p.cs),rt=rc&&rc.st==='ok'?rc.d:null;res.rc=rc;res.rt=rt;
-  res=adbStep(p,allowLookup,res);if(res.leg||res.pending)return res;
   var l2=pickLeg(rt,p);if(l2){res.leg=l2;res.src='community DB';}
   else res.pending=!!routePending[p.cs];
   return res;
@@ -870,7 +862,7 @@ function renderPanel(){
   $('list').innerHTML=rows.map(function(x){
     return '<div class="row" data-hex="'+esc(x.hex)+'"><span class="dot" style="background:'+altColor(x)+';box-shadow:0 0 1vh '+altColor(x)+'"></span><span class="cs">'+esc(x.cs||x.reg||x.hex.toUpperCase())+'</span><span class="ty">'+esc(typeName(x))+'</span><span class="al">'+(x.ground?'GND':(x.alt==null?'–':fmtInt(x.alt)+'′'))+'</span><span class="di">'+(x.d<10?x.d.toFixed(1):Math.round(x.d))+' mi</span></div>';
   }).join('');
-  if(!fiaLive)rows.forEach(function(x){routeFor(x.cs);});
+  if(!S.fiaKey)rows.forEach(function(x){routeFor(x.cs);});
   var st=$('status');
   if(lastErr){st.className='err';$('stTxt').textContent=lastErr;}
   else{st.className='';$('stTxt').textContent=lastOK?'Updated '+Math.round((now-lastOK)/1000)+'s ago':'Connecting…';}
@@ -950,7 +942,7 @@ function poll(){
     if(S.source==='auto')providerIdx=(providerIdx+1)%PROVIDERS.length;
     renderPanel();
   }).then(function(){
-    var wait=Math.max(fiaLive?10:5,S.refresh)*1000*(failCount?Math.min(6,failCount):1);
+    var wait=Math.max(5,S.refresh)*1000*(failCount?Math.min(6,failCount):1);
     pollTimer=setTimeout(poll,wait);
   });
 }

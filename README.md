@@ -29,9 +29,9 @@ starts, so restart Fully Kiosk (or reboot) after pushing. Supported keys include
 `adbDay`, `adbMonth`, plus any other setting (`lat`, `lon`, `name`, `radius`, ...).
 
 ## Data sources
-- Planes: FlyItalyADSB (key, 30 req/min, 300k/month - polled every >= 10 s), falling back to adsb.lol / adsb.fi.
+- Planes: adsb.lol (free), falling back to adsb.fi. FlyItalyADSB and AeroDataBox are used only for route lookups.
 - Routes for the card plane, in order - each must fit the plane's actual position/climb/descent:
-  1. FlyItalyADSB usual route, then every route that callsign flew in the last 14 days
+  1. FlyItalyADSB: every route that callsign flew in the last 14 days (one lookup per flight, cached 6 h)
   2. AeroDataBox live status by aircraft (capped: 6/day, 190/month; pauses until tomorrow on any quota reply)
   3. Free community route DB (only when FlyItalyADSB isn't available)
   4. Otherwise "Route unknown" - no guessing.
