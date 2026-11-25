@@ -186,7 +186,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.3';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.4';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -287,7 +287,7 @@ function fetchAircraft(){
   function attempt(k){
     if(k>=order.length)return Promise.reject(new Error(errs.join(' · ')));
     var p=order[k];
-    return fetchJSON(p.url(la,lo,nm),9000).then(function(j){
+    return fetchJSON(p.url(la,lo,nm),9000,{headers:{'Accept':'application/json'}}).then(function(j){
       srcFail[p.id]=0;
       srcName=p.name+(chosen&&p!==chosen?' ('+chosen.name+' unavailable)':'');
       if(!chosen)providerIdx=PROVIDERS.indexOf(p);
