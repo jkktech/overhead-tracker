@@ -164,7 +164,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
       <option value="custom">My own receiver (URL below)</option>
     </select></label></div>
     <div style="grid-column:1/-1"><label>FlyItalyADSB API key (route lookups for the big card; free at flyitalyadsb.com)<input id="fFia" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label><div id="fiaStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
-    <div style="grid-column:1/-1"><label>AirLabs API key (2nd route lookup for the card plane)<input id="fAl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
+    <div style="grid-column:1/-1"><label>AirLabs API key (2nd route lookup for the card plane, by flight number)<input id="fAl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
       <div style="display:flex;gap:2vh;margin-top:.8vh"><label style="flex:1">Max lookups / day<input id="fAlD" type="number" min="0"></label><label style="flex:1">Max lookups / month<input id="fAlM" type="number" min="0"></label></div>
       <div id="alStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
     <div style="grid-column:1/-1"><label>AeroDataBox RapidAPI key (3rd route lookup for the card plane)<input id="fAdb" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
@@ -194,7 +194,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.11';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.12';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:30,alMonth:950,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -562,26 +562,38 @@ function svcFetch(url,headers){
 }
 function airlineFromIcao(icao){var a=AIRLINES[icao||''];return a?{name:a[0],iata:a[1]}:{name:'',iata:''};}
 
-/* AirLabs: live flights filtered by aircraft hex. Free plan = 1,000 queries/month. */
+/* AirLabs Flight Info by callsign. On the free plan it includes dep/arr airports, scheduled times and
+   the aircraft's current position - the position is used to make sure it's the same plane (not
+   yesterday's flight with the same number). Free plan = 1,000 queries/month. */
+function hhmm(t){ // "2026-11-25 09:43" or "2026-11-25 09:43-06:00" -> "9:43 AM"
+  var m=/(\d{1,2}):(\d{2})/.exec(String(t||'').replace(/^\d{4}-\d{2}-\d{2}[ T]/,''));if(!m)return '';
+  var h=+m[1];return ((h%12)||12)+':'+m[2]+(h<12?' AM':' PM');
+}
+function nextHour(){var d=new Date();d.setMinutes(60,0,0);return d.getTime();}
 function alCall(p,key){
-  var url='https://airlabs.co/api/v9/flights?hex='+encodeURIComponent(p.hex.toUpperCase())+'&api_key='+encodeURIComponent(key)+
-          '&_fields=hex,flight_icao,dep_iata,dep_icao,arr_iata,arr_icao,airline_icao,airline_iata,status';
+  var url='https://airlabs.co/api/v9/flight?flight_icao='+encodeURIComponent(p.cs)+'&api_key='+encodeURIComponent(key);
   return svcFetch(url,{'Accept':'application/json'}).then(function(r){
     if(r.status===429)throw {pause:Date.now()+60e3,why:'rate limited'};
     return r.json();
   }).then(function(j){
     if(j&&j.error){
-      var t=((j.error.code||'')+' '+(j.error.message||'')).toLowerCase();
-      if(/minute|second|hour/.test(t))throw {pause:Date.now()+60e3,why:'rate limited'};
-      if(/limit|quota|credit|exceed|plan|expire/.test(t))throw {pause:nextMidnight(),why:'out of quota'};
-      if(/key|auth|token|access/.test(t))throw {pause:nextMidnight(),why:'key refused'};
+      var c=String(j.error.code||'').toLowerCase(),t=c+' '+String(j.error.message||'').toLowerCase();
+      if(c==='not_found'||c==='wrong_params')return {st:'none'};
+      if(/minute/.test(t))throw {pause:Date.now()+60e3,why:'per-minute limit'};
+      if(/hour/.test(t))throw {pause:nextHour(),why:'hourly limit'};
+      if(/month|limit|quota|exceed/.test(t))throw {pause:nextMidnight(),why:'out of quota'};
+      if(/expired/.test(t))throw {pause:nextMidnight(),why:'key expired'};
+      if(/key|auth/.test(t))throw {pause:nextMidnight(),why:'key refused'};
       return {st:'none'};
     }
-    var f=((j&&j.response)||[])[0];
-    if(!f)return {st:'none'};
+    var f=j&&j.response;
+    if(!f||!(f.dep_iata||f.dep_icao)||!(f.arr_iata||f.arr_icao))return {st:'none'};
+    if(/landed|scheduled|cancel/i.test(f.status||''))return {st:'none'};          // not the flight that's in the air now
+    if(f.lat!=null&&f.lng!=null&&distMi(+f.lat,+f.lng,p.plat,p.plon)>60)return {st:'none'};   // a different aircraft
     var L=legFromCodes(f.dep_iata||f.dep_icao,f.arr_iata||f.arr_icao);
     if(!L)return {st:'none'};
-    var al=airlineFromIcao(f.airline_icao);
+    L.arrT=hhmm(f.arr_estimated||f.arr_time);
+    var al=airlineFromIcao(f.airline_icao||p.cs.slice(0,3));
     return {st:'ok',leg:L,airline:al.name,iata:f.airline_iata||al.iata};
   });
 }
@@ -611,7 +623,8 @@ function adbCall(p,key){
                 lat:loc.lat!=null?loc.lat:(i&&i.lat),lon:loc.lon!=null?loc.lon:(i&&i.lon)};}
       var o=ap(f.departure.airport),d=ap(f.arrival.airport);
       if(o.lat==null||d.lat==null)return {st:'none'};
-      return {st:'ok',leg:{o:o.code,oc:o.city,olat:o.lat,olon:o.lon,d:d.code,dc:d.city,dlat:d.lat,dlon:d.lon},
+      var at=f.arrival.revisedTime||f.arrival.predictedTime||f.arrival.scheduledTime||{};
+      return {st:'ok',leg:{o:o.code,oc:o.city,olat:o.lat,olon:o.lon,d:d.code,dc:d.city,dlat:d.lat,dlon:d.lon,arrT:hhmm(at.local||'')},
               airline:(f.airline&&f.airline.name)||'',iata:(f.airline&&f.airline.iata)||''};
     });
   });
@@ -964,7 +977,7 @@ function renderPanel(){
       var dO=distMi(leg.olat,leg.olon,p.plat,p.plon),dD=distMi(p.plat,p.plon,leg.dlat,leg.dlon);
       var pct=Math.max(2,Math.min(98,dO/(dO+dD)*100));
       $('trackFill').style.width=pct+'%';$('trackPlane').style.left=pct+'%';
-      $('trackTxt').textContent=(p.ground?'':(dD<15?'Arriving soon':(dO<15?'Just departed':fmtInt(dD)+' mi to go')));
+      $('trackTxt').textContent=(p.ground?'':(dD<15?'Arriving soon':(dO<15?'Just departed':fmtInt(dD)+' mi to go')))+(leg.arrT&&!p.ground?' \u00b7 arr '+leg.arrT+' local':'');
     }else{
       $('route').style.display='none';$('noroute').style.display='block';
       $('noroute').textContent=RI.pending?'Looking up route\u2026':'Route unknown';

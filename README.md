@@ -32,7 +32,8 @@ starts, so restart Fully Kiosk (or reboot) after pushing. Supported keys include
 - Planes: adsb.lol (free), falling back to adsb.fi. FlyItalyADSB and AeroDataBox are used only for route lookups.
 - Routes for the card plane, in order - each must fit the plane's actual position/climb/descent:
   1. FlyItalyADSB: every route that callsign flew in the last 14 days (one lookup per flight, cached 6 h)
-  2. AirLabs live flight by aircraft hex (free 1,000/month; capped 30/day, 950/month)
+  2. AirLabs Flight Info by flight number (free 1,000/month; capped 30/day, 950/month). Its reported
+     position must be near the plane, so a same-number flight elsewhere is ignored. Adds arrival time.
   3. AeroDataBox live status by aircraft (capped: 6/day, 190/month)
      Each pauses until tomorrow on any quota/limit/key reply; each flight is looked up once (cached 8 h).
   4. Free community route DB (only when FlyItalyADSB isn't available)
