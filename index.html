@@ -31,11 +31,13 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 #card.swap .in{animation:swapIn .55s ease-out}
 @keyframes swapIn{from{opacity:0;transform:translateY(1.6vh)}to{opacity:1;transform:none}}
 #airRow{display:flex;align-items:center;gap:2vh;min-height:9vh}
+#cardShape{flex:0 0 auto;width:13vh;height:13vh;margin:-2vh -.6vh -2vh 0;transform:rotate(90deg);filter:drop-shadow(0 0 1.6vh rgba(var(--brandRGB),.8))}
+#cardShape svg{width:100%;height:100%;display:block}
 #logo{width:8.5vh;height:8.5vh;border-radius:1.8vh;background:#fff;object-fit:contain;padding:.6vh;display:none;box-shadow:0 0 2.4vh rgba(var(--brandRGB),.5)}
 #airTxt{min-width:0;flex:1}
 #airline{font-size:3vh;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em}
 #flight{font-size:7.6vh;font-weight:800;letter-spacing:.04em;line-height:1.05;color:#fff;text-shadow:0 0 2.6vh rgba(var(--brandRGB),.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#badge{position:absolute;top:2vh;right:2.2vh;font-size:2.4vh;font-weight:800;letter-spacing:.14em;color:#04110b;background:var(--ok);padding:.5vh 1.2vh;border-radius:1vh;display:none;animation:pulse 1.4s infinite;box-shadow:0 0 2.4vh var(--ok)}
+#badge{position:absolute;top:2vh;right:16vh;font-size:2.4vh;font-weight:800;letter-spacing:.14em;color:#04110b;background:var(--ok);padding:.5vh 1.2vh;border-radius:1vh;display:none;animation:pulse 1.4s infinite;box-shadow:0 0 2.4vh var(--ok)}
 @keyframes pulse{50%{opacity:.5}}
 /* route */
 #route{display:flex;align-items:flex-start;margin-top:1.6vh;gap:1.8vh}
@@ -111,7 +113,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
     <div id="card">
       <div id="badge">OVERHEAD</div>
       <div class="in">
-        <div id="airRow"><img id="logo" alt=""><div id="airTxt"><div id="airline">&nbsp;</div><div id="flight">&mdash;</div></div></div>
+        <div id="airRow"><img id="logo" alt=""><div id="airTxt"><div id="airline">&nbsp;</div><div id="flight">&mdash;</div></div><div id="cardShape"></div></div>
         <div id="route">
           <div class="ap"><div class="code" id="oCode">---</div><div class="city" id="oCity">&nbsp;</div></div>
           <div id="track"><div id="trackLine"><div id="trackFill"></div>
@@ -189,7 +191,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.9';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.10';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -252,9 +254,9 @@ function sunElev(lat,lon,date){
 }
 
 /* ---------------- reference data ---------------- */
-var AIRLINES={AAL:['American Airlines','AA'],UAL:['United Airlines','UA'],DAL:['Delta Air Lines','DL'],SWA:['Southwest Airlines','WN'],JBU:['JetBlue','B6'],ASA:['Alaska Airlines','AS'],NKS:['Spirit Airlines','NK'],FFT:['Frontier Airlines','F9'],AAY:['Allegiant Air','G4'],HAL:['Hawaiian Airlines','HA'],SCX:['Sun Country','SY'],MXY:['Breeze Airways','MX'],SKW:['SkyWest Airlines','OO'],RPA:['Republic Airways','YX'],ENY:['Envoy Air','MQ'],EDV:['Endeavor Air','9E'],JIA:['PSA Airlines','OH'],ASH:['Mesa Airlines','YV'],GJS:['GoJet Airlines','G7'],PDT:['Piedmont Airlines','PT'],QXE:['Horizon Air','QX'],AWI:['Air Wisconsin','ZW'],CPZ:['Compass Airlines','CP'],FDX:['FedEx','FX'],UPS:['UPS Airlines','5X'],GTI:['Atlas Air','5Y'],ABX:['ABX Air','GB'],ATN:['Air Transport Intl','8C'],CKS:['Kalitta Air','K4'],ACA:['Air Canada','AC'],JZA:['Jazz','QK'],WJA:['WestJet','WS'],AMX:['Aeromexico','AM'],VOI:['Volaris','Y4'],VIV:['Viva Aerobus','VB'],BAW:['British Airways','BA'],DLH:['Lufthansa','LH'],AFR:['Air France','AF'],KLM:['KLM','KL'],UAE:['Emirates','EK'],QTR:['Qatar Airways','QR'],ETD:['Etihad','EY'],THY:['Turkish Airlines','TK'],JAL:['Japan Airlines','JL'],ANA:['All Nippon Airways','NH'],CPA:['Cathay Pacific','CX'],KAL:['Korean Air','KE'],SIA:['Singapore Airlines','SQ'],IBE:['Iberia','IB'],EIN:['Aer Lingus','EI'],ICE:['Icelandair','FI'],SAS:['SAS','SK'],SWR:['Swiss','LX'],AUA:['Austrian','OS'],LOT:['LOT Polish','LO'],CMP:['Copa Airlines','CM'],AVA:['Avianca','AV'],LAN:['LATAM','LA'],EJA:['NetJets','1I'],LXJ:['Flexjet',''],VJA:['VistaJet',''],JTL:['Jet Linx',''],WUP:['Wheels Up','']};
+var AIRLINES={DHK:['DHL Air','D0'],BCS:['DHL (European Air Transport)','QY'],DAE:['DHL Aero Expreso','D5'],GEC:['Lufthansa Cargo','LH'],CLX:['Cargolux','CV'],AAL:['American Airlines','AA'],UAL:['United Airlines','UA'],DAL:['Delta Air Lines','DL'],SWA:['Southwest Airlines','WN'],JBU:['JetBlue','B6'],ASA:['Alaska Airlines','AS'],NKS:['Spirit Airlines','NK'],FFT:['Frontier Airlines','F9'],AAY:['Allegiant Air','G4'],HAL:['Hawaiian Airlines','HA'],SCX:['Sun Country','SY'],MXY:['Breeze Airways','MX'],SKW:['SkyWest Airlines','OO'],RPA:['Republic Airways','YX'],ENY:['Envoy Air','MQ'],EDV:['Endeavor Air','9E'],JIA:['PSA Airlines','OH'],ASH:['Mesa Airlines','YV'],GJS:['GoJet Airlines','G7'],PDT:['Piedmont Airlines','PT'],QXE:['Horizon Air','QX'],AWI:['Air Wisconsin','ZW'],CPZ:['Compass Airlines','CP'],FDX:['FedEx','FX'],UPS:['UPS Airlines','5X'],GTI:['Atlas Air','5Y'],ABX:['ABX Air','GB'],ATN:['Air Transport Intl','8C'],CKS:['Kalitta Air','K4'],ACA:['Air Canada','AC'],JZA:['Jazz','QK'],WJA:['WestJet','WS'],AMX:['Aeromexico','AM'],VOI:['Volaris','Y4'],VIV:['Viva Aerobus','VB'],BAW:['British Airways','BA'],DLH:['Lufthansa','LH'],AFR:['Air France','AF'],KLM:['KLM','KL'],UAE:['Emirates','EK'],QTR:['Qatar Airways','QR'],ETD:['Etihad','EY'],THY:['Turkish Airlines','TK'],JAL:['Japan Airlines','JL'],ANA:['All Nippon Airways','NH'],CPA:['Cathay Pacific','CX'],KAL:['Korean Air','KE'],SIA:['Singapore Airlines','SQ'],IBE:['Iberia','IB'],EIN:['Aer Lingus','EI'],ICE:['Icelandair','FI'],SAS:['SAS','SK'],SWR:['Swiss','LX'],AUA:['Austrian','OS'],LOT:['LOT Polish','LO'],CMP:['Copa Airlines','CM'],AVA:['Avianca','AV'],LAN:['LATAM','LA'],EJA:['NetJets','1I'],LXJ:['Flexjet',''],VJA:['VistaJet',''],JTL:['Jet Linx',''],WUP:['Wheels Up','']};
 /* brand colours by airline ICAO code (regional carriers that fly for several brands are left neutral) */
-var BRAND={AAL:'#2f8fe0',UAL:'#1f6fd1',DAL:'#e01933',SWA:'#f9b612',JBU:'#2a5bd7',ASA:'#00a3e0',NKS:'#ffe600',FFT:'#2fa37a',AAY:'#fdb813',HAL:'#8a4fc7',SCX:'#f15a22',MXY:'#00a3e0',FDX:'#7a3fd1',UPS:'#ffb500',GTI:'#3b7dd8',ACA:'#e03a3e',JZA:'#e03a3e',WJA:'#00aec7',AMX:'#3f73c9',VOI:'#a5307f',BAW:'#e33a3e',DLH:'#f9ba00',AFR:'#e4002b',KLM:'#00a1de',UAE:'#e0262f',QTR:'#a0285a',ETD:'#bd8b13',THY:'#e81932',JAL:'#e60012',ANA:'#2a7de1',CPA:'#00857c',KAL:'#00a0e2',SIA:'#f99f1c',IBE:'#e1001f',EIN:'#00a37a',ICE:'#2a6ad9',SWR:'#e30613',LOT:'#2a5bd7',CMP:'#2a5bd7',AVA:'#e3001b',EJA:'#b0b7bf'};
+var BRAND={DHK:'#d40511',BCS:'#d40511',DAE:'#d40511',CLX:'#d0102a',AAL:'#2f8fe0',UAL:'#1f6fd1',DAL:'#e01933',SWA:'#f9b612',JBU:'#2a5bd7',ASA:'#00a3e0',NKS:'#ffe600',FFT:'#2fa37a',AAY:'#fdb813',HAL:'#8a4fc7',SCX:'#f15a22',MXY:'#00a3e0',FDX:'#7a3fd1',UPS:'#ffb500',GTI:'#3b7dd8',ACA:'#e03a3e',JZA:'#e03a3e',WJA:'#00aec7',AMX:'#3f73c9',VOI:'#a5307f',BAW:'#e33a3e',DLH:'#f9ba00',AFR:'#e4002b',KLM:'#00a1de',UAE:'#e0262f',QTR:'#a0285a',ETD:'#bd8b13',THY:'#e81932',JAL:'#e60012',ANA:'#2a7de1',CPA:'#00857c',KAL:'#00a0e2',SIA:'#f99f1c',IBE:'#e1001f',EIN:'#00a37a',ICE:'#2a6ad9',SWR:'#e30613',LOT:'#2a5bd7',CMP:'#2a5bd7',AVA:'#e3001b',EJA:'#b0b7bf'};
 var TYPES={A19N:'Airbus A319neo',A20N:'Airbus A320neo',A21N:'Airbus A321neo',A318:'Airbus A318',A319:'Airbus A319',A320:'Airbus A320',A321:'Airbus A321',A332:'Airbus A330-200',A333:'Airbus A330-300',A339:'Airbus A330-900',A343:'Airbus A340-300',A359:'Airbus A350-900',A35K:'Airbus A350-1000',A388:'Airbus A380',BCS1:'Airbus A220-100',BCS3:'Airbus A220-300',A221:'Airbus A220-100',A223:'Airbus A220-300',B712:'Boeing 717',B737:'Boeing 737-700',B738:'Boeing 737-800',B739:'Boeing 737-900',B37M:'Boeing 737 MAX 7',B38M:'Boeing 737 MAX 8',B39M:'Boeing 737 MAX 9',B3XM:'Boeing 737 MAX 10',B752:'Boeing 757-200',B753:'Boeing 757-300',B762:'Boeing 767-200',B763:'Boeing 767-300',B764:'Boeing 767-400',B772:'Boeing 777-200',B77L:'Boeing 777-200LR',B77W:'Boeing 777-300ER',B778:'Boeing 777-8',B779:'Boeing 777-9',B744:'Boeing 747-400',B748:'Boeing 747-8',B788:'Boeing 787-8',B789:'Boeing 787-9',B78X:'Boeing 787-10',CRJ2:'Bombardier CRJ200',CRJ7:'Bombardier CRJ700',CRJ9:'Bombardier CRJ900',CRJX:'Bombardier CRJ1000',E135:'Embraer ERJ-135',E145:'Embraer ERJ-145',E170:'Embraer E170',E75L:'Embraer E175',E75S:'Embraer E175',E190:'Embraer E190',E195:'Embraer E195',E290:'Embraer E190-E2',E295:'Embraer E195-E2',DH8D:'Dash 8 Q400',AT72:'ATR 72',AT76:'ATR 72-600',MD11:'McDonnell Douglas MD-11',DC10:'McDonnell Douglas DC-10',C172:'Cessna 172',C182:'Cessna 182',C208:'Cessna Caravan',C25A:'Citation CJ2',C25B:'Citation CJ3',C25C:'Citation CJ4',C560:'Citation V',C56X:'Citation Excel',C680:'Citation Sovereign',C68A:'Citation Latitude',C700:'Citation Longitude',C750:'Citation X',CL30:'Challenger 300',CL35:'Challenger 350',CL60:'Challenger 600',GLEX:'Global Express',GL5T:'Global 5000',GL7T:'Global 7500',GLF4:'Gulfstream IV',GLF5:'Gulfstream V',GLF6:'Gulfstream G650',G280:'Gulfstream G280',E55P:'Phenom 300',E545:'Praetor 500',E550:'Praetor 600',LJ45:'Learjet 45',LJ75:'Learjet 75',PC12:'Pilatus PC-12',PC24:'Pilatus PC-24',SR22:'Cirrus SR22',SF50:'Cirrus Vision Jet',PA28:'Piper Cherokee',PA32:'Piper Saratoga',PA46:'Piper Malibu',BE20:'King Air 200',BE35:'Bonanza',BE36:'Bonanza',BE9L:'King Air 90',B350:'King Air 350',HDJT:'HondaJet',TBM9:'TBM 900',TBM7:'TBM 700',EC35:'Airbus H135',EC45:'Airbus H145',A109:'AW109',B407:'Bell 407',R44:'Robinson R44',S76:'Sikorsky S-76',C17:'Boeing C-17',C130:'Lockheed C-130',K35R:'KC-135',H60:'Black Hawk'};
 
 /* ---------------- state ---------------- */
@@ -371,6 +373,7 @@ function ingest(list){
     if(d>S.radius*1.08)return;
     var p=planes[hex]||(planes[hex]={hex:hex,trail:[],born:now});
     p.cs=(a.flight||'').trim().toUpperCase();
+    p.cat=a.category||p.cat||'';
     p.reg=a.r||p.reg||'';
     p.type=a.t||p.type||'';
     p.desc=a.desc||p.desc||'';
@@ -644,6 +647,60 @@ function inferLocal(p){
 }
 function inferText(p){var g=inferLocal(p);if(!g)return '';return (g.kind==='dep'?'Just departed ':'Arriving at ')+g.ap[3]+' ('+g.ap[0]+')';}
 
+/* ---------------- aircraft silhouettes (shapes/, AircraftShapesSVG, GPL-3.0) ---------------- */
+var SHAPES=null,SHAPE_TXT={},SHAPE_IMG={},SHAPE_TINT={},shapeTintN=0;
+function loadShapeIndex(){
+  try{var c=localStorage.getItem('overhead.shapeIndex');if(c)SHAPES=JSON.parse(c);}catch(e){}
+  fetchJSON(airBase()+'shapes/index.json',20000).then(function(j){
+    if(j&&j.codes){SHAPES=j;try{localStorage.setItem('overhead.shapeIndex',JSON.stringify(j));}catch(e){}}
+  },function(){});
+}
+function shapeCode(p){
+  if(!SHAPES)return null;
+  if(!SHAPES.set){SHAPES.set={};SHAPES.codes.forEach(function(c){SHAPES.set[c]=1;});}
+  var t=(p.type||'').toUpperCase();
+  if(t&&SHAPES.set[t])return t;
+  if(t&&SHAPES.alias[t])return SHAPES.alias[t];
+  return (SHAPES.byCategory||{})[p.cat]||null;
+}
+function shapeText(code){       // svg text, cached in memory + localStorage; null while loading
+  if(!code)return null;
+  if(SHAPE_TXT[code]!==undefined)return SHAPE_TXT[code];
+  var k='overhead.shape.'+code,c=null;try{c=localStorage.getItem(k);}catch(e){}
+  if(c){SHAPE_TXT[code]=c;return c;}
+  SHAPE_TXT[code]=null;
+  fetch(airBase()+'shapes/'+code+'.svg').then(function(r){if(!r.ok)throw 0;return r.text();}).then(function(t){
+    SHAPE_TXT[code]=t;try{localStorage.setItem(k,t);}catch(e){}
+  },function(){setTimeout(function(){delete SHAPE_TXT[code];},5*60e3);});
+  return null;
+}
+function shapeImage(code){
+  if(SHAPE_IMG[code])return SHAPE_IMG[code].ok?SHAPE_IMG[code].img:null;
+  var t=shapeText(code);if(!t)return null;
+  var im=new Image(),rec={img:im,ok:false};SHAPE_IMG[code]=rec;
+  im.onload=function(){rec.ok=true;};
+  im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(t);
+  return null;
+}
+function shapeTinted(code,col){ // canvas with the silhouette filled in col, dark panel lines kept
+  if(!code)return null;
+  var key=code+'|'+col;if(SHAPE_TINT[key])return SHAPE_TINT[key];
+  var im=shapeImage(code);if(!im)return null;
+  if(shapeTintN>400){SHAPE_TINT={};shapeTintN=0;}
+  var cv2=document.createElement('canvas'),n=96;cv2.width=cv2.height=n;var x=cv2.getContext('2d');
+  x.drawImage(im,0,0,n,n);
+  x.globalCompositeOperation='multiply';x.fillStyle=col;x.fillRect(0,0,n,n);
+  x.globalCompositeOperation='destination-in';x.drawImage(im,0,0,n,n);
+  SHAPE_TINT[key]=cv2;shapeTintN++;return cv2;
+}
+var cardShapeKey='';
+function setCardShape(p,brand){
+  var code=p?shapeCode(p):null,t=code?shapeText(code):null,key=(code||'')+'|'+brand+'|'+(t?1:0);
+  if(key===cardShapeKey)return;cardShapeKey=key;
+  $('cardShape').innerHTML=t?t.replace(/fill:#ffffff/gi,'fill:'+brand).replace(/stroke:#1a1a1a/gi,'stroke:rgba(0,0,0,.45)'):'';
+  $('cardShape').style.display=t?'':'none';
+}
+
 /* ---------------- radar ---------------- */
 var cv=$('radar'),ctx=cv.getContext('2d'),W=0,DPR=1,hitList=[],prevSweep=null;
 var PLANE_PTS=[[0,-1],[.12,-.7],[.13,-.22],[.95,.2],[.95,.36],[.13,.14],[.09,.62],[.38,.84],[.38,.97],[0,.88]];
@@ -747,8 +804,10 @@ function drawRadar(arr,now){
       if(S.anim){c.shadowColor=col;c.shadowBlur=u*3;}
     }
     c.rotate((p.trk||0)*D2R);
-    planePath(c,u*(sel?4.2:2.8));
-    c.fillStyle=col;c.fill();c.shadowBlur=0;c.lineWidth=u*0.3;c.strokeStyle='rgba(3,5,8,.9)';c.stroke();
+    var tinted=shapeTinted(shapeCode(p),col);
+    if(tinted){var sz=u*(sel?10:6.8);c.drawImage(tinted,-sz/2,-sz/2,sz,sz);c.shadowBlur=0;}
+    else{planePath(c,u*(sel?4.2:2.8));
+      c.fillStyle=col;c.fill();c.shadowBlur=0;c.lineWidth=u*0.3;c.strokeStyle='rgba(3,5,8,.9)';c.stroke();}
     c.restore();
     if(showLabels||sel){
       c.font=(sel?'bold ':'')+(sel?3.4:2.5)*u+'px Roboto,Arial';c.textAlign='left';c.textBaseline='middle';
@@ -832,7 +891,7 @@ function renderPanel(){
   if(p){
     if(p.hex!==shownHex){var card=$('card');card.classList.remove('swap');void card.offsetWidth;card.classList.add('swap');shownHex=p.hex;}
     var RI=routeInfo(p,true),ai=airlineInfo(p,RI.rt);
-    setBrand(ai.brand);
+    setBrand(ai.brand);setCardShape(p,ai.brand);
     $('airline').textContent=ai.name||(p.cs?'Private / unknown operator':'No callsign');
     $('flight').textContent=p.cs||p.reg||p.hex.toUpperCase();
     var logo=ai.iata?'https://images.kiwi.com/airlines/128/'+ai.iata+'.png':'';
@@ -1024,7 +1083,7 @@ $('bSave').onclick=function(){
 
 function start(){
   $('place').textContent=S.name||'Overhead';
-  tickClock();updateSky();keepAwake();loadAirports();renderPanel();poll();
+  tickClock();updateSky();keepAwake();loadAirports();loadShapeIndex();renderPanel();poll();
 }
 if(S.lat==null||isNaN(S.lat)){tickClock();openSettings();}else start();
 })();

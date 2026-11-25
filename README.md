@@ -35,7 +35,8 @@ starts, so restart Fully Kiosk (or reboot) after pushing. Supported keys include
   2. AeroDataBox live status by aircraft (capped: 6/day, 190/month; pauses until tomorrow on any quota reply)
   3. Free community route DB (only when FlyItalyADSB isn't available)
   4. Otherwise "Route unknown" - no guessing.
-- Airport coordinates: `airports.json`, built from OurAirports by `tools/mk_airports.py`.
+- Airport coordinates: `airports.json`, built from OurAirports (public domain) by `tools/mk_airports.py`.
+- Aircraft silhouettes: `shapes/`, from [AircraftShapesSVG](https://github.com/RexKramer1/AircraftShapesSVG) by RexKramer1 and contributors, **GPL-3.0** (see `shapes/LICENSE` and `shapes/NOTICE.md`), prepared by `tools/norm_shapes.py`.
 
 ## Releasing an update
 Edit `index.html`, then run `./release.sh`. The page checks `version.json` every 30 minutes
