@@ -158,7 +158,6 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
     <div><label>Flight data source<select id="fSrc">
       <option value="auto">Automatic (best available)</option>
       <option value="adsblol">adsb.lol</option>
-      <option value="airplaneslive">airplanes.live</option>
       <option value="adsbfi">adsb.fi</option>
       <option value="custom">My own receiver (URL below)</option>
     </select></label></div>
@@ -186,7 +185,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.4';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.5';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -204,6 +203,7 @@ function loadSettings(){
 }
 function saveSettings(){try{localStorage.setItem('overhead.settings',JSON.stringify(S));}catch(e){}}
 var S=loadSettings();
+if(S.source==='airplaneslive')S.source='auto';   // airplanes.live API now requires feeding
 var DEMO=/[?&]demo=1/.test(location.search);
 if(DEMO&&(S.lat==null||isNaN(S.lat))){S.lat=41.8781;S.lon=-87.6298;S.name='Demo';}
 
@@ -260,7 +260,6 @@ var alerted={}, alertTimer=null;
 /* ---------------- data sources ---------------- */
 var PROVIDERS=[
   {id:'adsblol',name:'adsb.lol',url:function(la,lo,nm){return 'https://api.adsb.lol/v2/point/'+la+'/'+lo+'/'+nm;}},
-  {id:'airplaneslive',name:'airplanes.live',url:function(la,lo,nm){return 'https://api.airplanes.live/v2/point/'+la+'/'+lo+'/'+nm;}},
   {id:'adsbfi',name:'adsb.fi',url:function(la,lo,nm){return 'https://opendata.adsb.fi/api/v2/lat/'+la+'/lon/'+lo+'/dist/'+nm;}}
 ];
 function radiusNm(){return Math.min(250,Math.ceil(S.radius*0.869+2));}

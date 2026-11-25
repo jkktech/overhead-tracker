@@ -3,7 +3,7 @@
 A PlaneSlate-style "what's flying over my house" display for a jailbroken Amazon Echo Show 5
 (LineageOS + Fully Kiosk Browser), or any browser. Single HTML file, free data sources only:
 
-- Aircraft positions: adsb.lol / airplanes.live / adsb.fi (or your own tar1090 receiver)
+- Aircraft positions: adsb.lol / adsb.fi (or your own tar1090 receiver)
 - Routes: adsb.lol routeset + adsbdb, sanity-checked against the plane's position
 - Satellite imagery: Esri World Imagery
 
