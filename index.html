@@ -164,9 +164,10 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
       <option value="custom">My own receiver (URL below)</option>
     </select></label></div>
     <div style="grid-column:1/-1"><label>FlyItalyADSB API key (route lookups for the big card; free at flyitalyadsb.com)<input id="fFia" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label><div id="fiaStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
-    <div style="grid-column:1/-1"><label>AirLabs API key (2nd route lookup for the card plane, by flight number)<input id="fAl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
+    <div style="grid-column:1/-1"><label>AirLabs API key (area snapshots + single-flight lookups)<input id="fAl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
       <div style="display:flex;gap:2vh;margin-top:.8vh"><label style="flex:1">Max lookups / day<input id="fAlD" type="number" min="0"></label><label style="flex:1">Max lookups / month<input id="fAlM" type="number" min="0"></label></div>
-      <div id="alStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
+      <label class="chk" style="margin-top:1vh"><input id="fAlB" type="checkbox">Area snapshots (every 30 min 8 AM&ndash;8 PM, every 2 h overnight) &ndash; max/day <input id="fAlBD" type="number" min="0" style="width:12vh;margin-left:1vh"></label>
+      <div id="alStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div><div id="alSnapStat" style="font-size:2.3vh;color:var(--dim);margin-top:.3vh"></div></div>
     <div style="grid-column:1/-1"><label>AeroDataBox RapidAPI key (3rd route lookup for the card plane)<input id="fAdb" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste key, or push it in overhead-config.json"></label>
       <div style="display:flex;gap:2vh;margin-top:.8vh"><label style="flex:1">Max lookups / day<input id="fAdbD" type="number" min="0"></label><label style="flex:1">Max lookups / month<input id="fAdbM" type="number" min="0"></label></div>
       <div id="adbStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
@@ -194,10 +195,10 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.12';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.13';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
-var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:30,alMonth:950,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
+var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
 function loadSettings(){
   var s={},k;for(k in DEFAULTS)s[k]=DEFAULTS[k];
   try{var raw=localStorage.getItem('overhead.settings');if(raw){var o=JSON.parse(raw);for(k in o)if(k in s)s[k]=o[k];}}catch(e){}
@@ -211,6 +212,7 @@ function loadSettings(){
   if(q.get('fiaKey'))s.fiaKey=q.get('fiaKey');
   if(q.get('adbKey'))s.adbKey=q.get('adbKey');
   if(q.get('alKey'))s.alKey=q.get('alKey');
+  if((s.setVer||0)<1){if(s.alDay===30)s.alDay=3;s.setVer=1;}   // single-flight AirLabs lookups now share the month with snapshots
   // settings pushed from /sdcard/overhead-config.json (read by the loader) always win
   var cfg=window.__OVERHEAD_CONFIG;
   if(cfg&&typeof cfg==='object')for(k in cfg)if(k in s)s[k]=cfg[k];
@@ -550,7 +552,7 @@ function fiaUsual(cs){
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 var SVU={};try{SVU=JSON.parse(localStorage.getItem('overhead.svcUsage2')||'{}')||{};}catch(e){SVU={};}
 if(!SVU.adb){try{var _o=JSON.parse(localStorage.getItem('overhead.adbUsage')||'null');if(_o)SVU.adb=_o;}catch(e){}}
-function svcU(id){var u=SVU[id]||(SVU[id]={}),d=todayStr(),m=d.slice(0,7);if(u.month!==m){u.month=m;u.m=0;}if(u.day!==d){u.day=d;u.n=0;}return u;}
+function svcU(id){var u=SVU[id]||(SVU[id]={}),d=todayStr(),m=d.slice(0,7);if(u.month!==m){u.month=m;u.m=0;}if(u.day!==d){u.day=d;u.n=0;u.bn=0;}return u;}
 function saveSvcU(){try{localStorage.setItem('overhead.svcUsage2',JSON.stringify(SVU));}catch(e){}}
 function svcUsable(d){var u=svcU(d.id);return !!S[d.key]&&Date.now()>=(u.pausedUntil||0)&&u.n<S[d.day]&&u.m<S[d.month];}
 function svcPause(d,until,why){var u=svcU(d.id);u.pausedUntil=until;u.why=why;saveSvcU();}
@@ -576,16 +578,7 @@ function alCall(p,key){
     if(r.status===429)throw {pause:Date.now()+60e3,why:'rate limited'};
     return r.json();
   }).then(function(j){
-    if(j&&j.error){
-      var c=String(j.error.code||'').toLowerCase(),t=c+' '+String(j.error.message||'').toLowerCase();
-      if(c==='not_found'||c==='wrong_params')return {st:'none'};
-      if(/minute/.test(t))throw {pause:Date.now()+60e3,why:'per-minute limit'};
-      if(/hour/.test(t))throw {pause:nextHour(),why:'hourly limit'};
-      if(/month|limit|quota|exceed/.test(t))throw {pause:nextMidnight(),why:'out of quota'};
-      if(/expired/.test(t))throw {pause:nextMidnight(),why:'key expired'};
-      if(/key|auth/.test(t))throw {pause:nextMidnight(),why:'key refused'};
-      return {st:'none'};
-    }
+    if(j&&j.error){var e=alErr(j);if(e)throw e;return {st:'none'};}
     var f=j&&j.response;
     if(!f||!(f.dep_iata||f.dep_icao)||!(f.arr_iata||f.arr_icao))return {st:'none'};
     if(/landed|scheduled|cancel/i.test(f.status||''))return {st:'none'};          // not the flight that's in the air now
@@ -630,6 +623,70 @@ function adbCall(p,key){
   });
 }
 
+/* ---------------- AirLabs area snapshots ----------------
+   One /flights query returns every flight in a box ~250 mi around home (1 query each). Taken on a schedule:
+   every 30 min 8 AM-8 PM, every 2 h overnight = 30/day (~900/month). Routes then cost nothing to look up. */
+var ALSNAP=null;try{ALSNAP=JSON.parse(localStorage.getItem('overhead.alSnap')||'null');}catch(e){ALSNAP=null;}
+var AL_SLOTS=(function(){var a=[],m;for(m=8*60;m<20*60;m+=30)a.push(m);[21,23,1,3,5,7].forEach(function(h){a.push(h*60);});return a.sort(function(x,y){return x-y;});})();
+function lastSlotTime(){
+  var now=new Date(),mins=now.getHours()*60+now.getMinutes(),best=-1;
+  AL_SLOTS.forEach(function(m){if(m<=mins)best=m;});
+  var d=new Date(now);
+  if(best<0){d.setDate(d.getDate()-1);best=AL_SLOTS[AL_SLOTS.length-1];}
+  d.setHours(Math.floor(best/60),best%60,0,0);return d.getTime();
+}
+var alBulkBusy=false;
+function alErr(j){
+  var c=String(j.error.code||'').toLowerCase(),t=c+' '+String(j.error.message||'').toLowerCase();
+  if(c==='not_found'||c==='wrong_params')return null;
+  if(/minute/.test(t))return {pause:Date.now()+60e3,why:'per-minute limit'};
+  if(/hour/.test(t))return {pause:nextHour(),why:'hourly limit'};
+  if(/month|limit|quota|exceed/.test(t))return {pause:nextMidnight(),why:'out of quota'};
+  if(/expired/.test(t))return {pause:nextMidnight(),why:'key expired'};
+  if(/key|auth/.test(t))return {pause:nextMidnight(),why:'key refused'};
+  return null;
+}
+function alBulkDue(){
+  if(DEMO||!S.alKey||!S.alBulk||S.lat==null)return false;
+  var d=SVC_BY.airlabs,u=svcU('airlabs');
+  if(Date.now()<(u.pausedUntil||0)||(u.bn||0)>=S.alBulkDay||u.m>=S[d.month])return false;
+  return !(ALSNAP&&ALSNAP.t>=lastSlotTime()&&Math.abs(ALSNAP.lat-S.lat)<0.01&&Math.abs(ALSNAP.lon-S.lon)<0.01);
+}
+function alBulkCheck(){
+  if(alBulkBusy||!alBulkDue())return;
+  var u=svcU('airlabs');
+  alBulkBusy=true;u.bn=(u.bn||0)+1;u.m++;saveSvcU();
+  var dLat=3.6,dLon=3.6/Math.max(0.3,Math.cos(S.lat*D2R));   // ~250 mi each way
+  var bbox=[(S.lat-dLat).toFixed(3),(S.lon-dLon).toFixed(3),(S.lat+dLat).toFixed(3),(S.lon+dLon).toFixed(3)].join(',');
+  var url='https://airlabs.co/api/v9/flights?bbox='+bbox+'&api_key='+encodeURIComponent(S.alKey)+
+          '&_fields=hex,flight_icao,dep_iata,dep_icao,arr_iata,arr_icao,status';
+  svcFetch(url,{'Accept':'application/json'}).then(function(r){
+    if(r.status===429)throw {pause:Date.now()+60e3,why:'rate limited'};
+    return r.json();
+  }).then(function(j){
+    if(j&&j.error){throw alErr(j)||{};}
+    var map={},n=0;
+    ((j&&j.response)||[]).forEach(function(f){
+      var dep=f.dep_iata||f.dep_icao,arr=f.arr_iata||f.arr_icao;
+      if(!f.hex||!dep||!arr)return;
+      map[String(f.hex).toUpperCase()]=[String(f.flight_icao||'').toUpperCase(),dep,arr,f.status||''];n++;
+    });
+    ALSNAP={t:Date.now(),lat:S.lat,lon:S.lon,n:n,map:map};
+    try{localStorage.setItem('overhead.alSnap',JSON.stringify(ALSNAP));}catch(e){}
+    renderPanel();
+  }).catch(function(e){if(e&&e.pause)svcPause(SVC_BY.airlabs,e.pause,e.why);})
+    .then(function(){alBulkBusy=false;});
+}
+function snapLeg(p){
+  if(!ALSNAP||Date.now()-ALSNAP.t>4*3600e3)return null;
+  var r=ALSNAP.map[String(p.hex).toUpperCase()];
+  if(!r)return null;
+  if(r[0]&&p.cs&&r[0]!==p.cs)return null;          // same aircraft, different flight -> not this leg
+  if(/landed/i.test(r[3])&&!p.ground)return null;
+  var L=legFromCodes(r[1],r[2]);
+  return L&&legFits(L,p)?L:null;
+}
+
 var SVCS=[
   {id:'airlabs',name:'AirLabs',key:'alKey',day:'alDay',month:'alMonth',call:alCall},
   {id:'adb',name:'AeroDataBox',key:'adbKey',day:'adbDay',month:'adbMonth',call:adbCall}
@@ -672,7 +729,7 @@ function svcStep(p,allowLookup,res){
 }
 function svcStatusText(d){
   if(!S[d.key])return 'No key – skipped.';
-  var u=svcU(d.id),t='Used today '+u.n+' / '+S[d.day]+' · this month '+u.m+' / '+S[d.month];
+  var u=svcU(d.id),t=(d.id==='airlabs'?'Single lookups today ':'Used today ')+u.n+' / '+S[d.day]+' · this month (all) '+u.m+' / '+S[d.month];
   if(Date.now()<(u.pausedUntil||0))t+=' · paused ('+u.why+') until '+new Date(u.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'});
   return t;
 }
@@ -681,6 +738,8 @@ function svcStatusText(d){
    FlyItalyADSB isn't in use) the free community DB -> "Route unknown". No guessing. */
 function routeInfo(p,allowLookup){
   var res={leg:null,src:'',pending:false,rt:null,rc:null};
+  var sl=snapLeg(p);if(sl){res.leg=sl;res.src='AirLabs';return res;}   // free: from the latest area snapshot
+  if(alBulkBusy||alBulkDue()){res.pending=true;return res;}           // a fresh snapshot is on its way - don't spend lookups yet
   if(!p.cs)return res;
   var airline=/^[A-Z]{3}\d/.test(p.cs),fiaAnswered=false;
   if(S.fiaKey&&airline){
@@ -1069,7 +1128,7 @@ var pollTimer=null,failCount=0;
 function poll(){
   clearTimeout(pollTimer);
   (DEMO?demoFetch():fetchAircraft()).then(function(list){
-    ingest(list);lastOK=Date.now();lastErr='';failCount=0;renderPanel();
+    ingest(list);lastOK=Date.now();lastErr='';failCount=0;renderPanel();alBulkCheck();
   },function(e){
     failCount++;srcName='';lastErr=(e&&e.message?e.message:'Can’t reach flight data')+' – retrying…';
     if(S.source==='auto')providerIdx=(providerIdx+1)%PROVIDERS.length;
@@ -1118,7 +1177,8 @@ function openSettings(){
   $('fName').value=S.name||'';$('fLat').value=S.lat==null?'':S.lat;$('fLon').value=S.lon==null?'':S.lon;
   $('fRad').value=S.radius;$('fRef').value=S.refresh;$('fSrc').value=S.source;$('fCustom').value=S.custom||'';$('fGround').checked=!!S.ground;
   $('fAlert').value=S.alertMi;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
-  $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;
+  $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;$('fAlB').checked=!!S.alBulk;$('fAlBD').value=S.alBulkDay;
+  var su=svcU('airlabs');$('alSnapStat').textContent=S.alKey&&S.alBulk?('Snapshots today '+(su.bn||0)+' / '+S.alBulkDay+(ALSNAP?' \u00b7 last at '+new Date(ALSNAP.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+', '+ALSNAP.n+' flights with routes':' \u00b7 none yet')):'';
   $('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
   var fu=fiaU();$('fiaStat').textContent=S.fiaKey?('Used this month: '+fmtInt(fu.m)+' / '+fmtInt(S.fiaCap)+(Date.now()<(fu.pausedUntil||0)?' \u00b7 paused ('+fu.why+') until '+new Date(fu.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 using adsb.lol / adsb.fi and the community route database.';
   $('bClose').style.display=S.lat==null?'none':'';$('geoMsg').textContent='';
@@ -1148,6 +1208,7 @@ $('bSave').onclick=function(){
   S.anim=$('fAnim').checked;S.chime=$('fChime').checked;S.dim=$('fDim').checked;
   var ak=$('fAdb').value.trim();if(ak!==S.adbKey){S.adbKey=ak;svcPause(SVC_BY.adb,0,'');SVR.adb={};saveSvcR();}
   var lk=$('fAl').value.trim();if(lk!==S.alKey){S.alKey=lk;svcPause(SVC_BY.airlabs,0,'');SVR.airlabs={};saveSvcR();}
+  S.alBulk=$('fAlB').checked;S.alBulkDay=Math.max(0,parseInt($('fAlBD').value,10)||0);
   S.alDay=Math.max(0,parseInt($('fAlD').value,10)||0);S.alMonth=Math.max(0,parseInt($('fAlM').value,10)||0);
   S.adbDay=Math.max(0,parseInt($('fAdbD').value,10)||0);S.adbMonth=Math.max(0,parseInt($('fAdbM').value,10)||0);
   var nk=$('fFia').value.trim();if(nk!==S.fiaKey){S.fiaKey=nk;var fu2=fiaU();fu2.pausedUntil=0;fu2.why='';saveFiaU();}
