@@ -195,7 +195,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.14';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.15';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -215,7 +215,7 @@ function loadSettings(){
   if((s.setVer||0)<1){if(s.alDay===30)s.alDay=3;s.setVer=1;}   // single-flight AirLabs lookups now share the month with snapshots
   // settings pushed from /sdcard/overhead-config.json (read by the loader) always win
   var cfg=window.__OVERHEAD_CONFIG;
-  if(cfg&&typeof cfg==='object')for(k in cfg)if(k in s)s[k]=cfg[k];
+  if(cfg&&typeof cfg==='object')for(k in cfg)if(k in s)s[k]=(typeof cfg[k]==='string'&&/Key$/.test(k))?cfg[k].replace(/[\s"']/g,''):cfg[k];
   return s;
 }
 function saveSettings(){try{localStorage.setItem('overhead.settings',JSON.stringify(S));}catch(e){}}
@@ -282,7 +282,7 @@ var FIAU={};try{FIAU=JSON.parse(localStorage.getItem('overhead.fiaUsage')||'{}')
 function fiaU(){var m=new Date().toISOString().slice(0,7);if(FIAU.month!==m){FIAU={month:m,m:0,pausedUntil:FIAU.pausedUntil||0,why:FIAU.why||''};}return FIAU;}
 function saveFiaU(){try{localStorage.setItem('overhead.fiaUsage',JSON.stringify(FIAU));}catch(e){}}
 function nextMidnight(){var d=new Date();d.setHours(24,0,0,0);return d.getTime();}
-function fiaUsable(){var u=fiaU();return !!S.fiaKey&&Date.now()>=(u.pausedUntil||0)&&u.m<S.fiaCap;}
+function fiaUsable(){var u=fiaU();if(u.why==='key refused'&&u.refusedKey!==S.fiaKey){u.pausedUntil=0;u.why='';saveFiaU();}return !!S.fiaKey&&Date.now()>=(u.pausedUntil||0)&&u.m<S.fiaCap;}
 var fiaLastCall=0;
 function fiaGet(path){
   var u=fiaU();u.m++;saveFiaU();fiaLastCall=Date.now();
@@ -297,7 +297,7 @@ function fiaGet(path){
       u.pausedUntil=shortWait?Date.now()+ra*1000:nextMidnight();u.why=shortWait?'per-minute limit':'monthly quota reached';saveFiaU();
       var e=new Error('rate limited');e.status=429;throw e;
     }
-    if(r.status===401){u.pausedUntil=nextMidnight();u.why='key refused';saveFiaU();}
+    if(r.status===401){u.pausedUntil=nextMidnight();u.why='key refused';u.refusedKey=S.fiaKey;saveFiaU();}
     if(!r.ok){
       return r.json().catch(function(){return {};}).then(function(b){
         var er=new Error('HTTP '+r.status);er.status=r.status;er.body=b||{};
@@ -540,6 +540,7 @@ function fiaDays(){var d=7;try{d=parseInt(localStorage.getItem('overhead.fiaDays
 function setFiaDays(d){try{localStorage.setItem('overhead.fiaDays',String(d));}catch(e){}}
 function fiaUsual(cs){
   var c=FIA_USUAL[cs];
+  if(c&&c.ok===false&&c.key!==S.fiaKey)c=null;          // failed with a different key - try again now
   if(c&&(c.pending||Date.now()-c.t<6*3600e3))return c;
   if(fiaUsualBusy||!fiaUsable()||Date.now()-fiaLastCall<2500)return null;   // stay far under 30/min
   fiaUsualBusy=true;FIA_USUAL[cs]={t:Date.now(),pending:true,list:[]};
@@ -553,7 +554,7 @@ function fiaUsual(cs){
     list.sort(function(a,b){return (b.count||0)-(a.count||0);});
     return {ok:true,list:list};
   },function(e){return {ok:!!(e&&e.status===404),list:[]};}).then(function(r){
-    fiaUsualBusy=false;FIA_USUAL[cs]={t:r.ok?Date.now():Date.now()-6*3600e3+10*60e3,list:r.list,ok:r.ok};   // failures retried in 10 min
+    fiaUsualBusy=false;FIA_USUAL[cs]={t:r.ok?Date.now():Date.now()-6*3600e3+10*60e3,list:r.list,ok:r.ok,key:S.fiaKey};   // failures retried in 10 min
     try{var k=Object.keys(FIA_USUAL);if(k.length>300)k.sort(function(a,b){return FIA_USUAL[a].t-FIA_USUAL[b].t;}).slice(0,k.length-200).forEach(function(x){delete FIA_USUAL[x];});
       localStorage.setItem('overhead.fiaUsual',JSON.stringify(FIA_USUAL));}catch(e){}
     renderPanel();
@@ -569,8 +570,8 @@ var SVU={};try{SVU=JSON.parse(localStorage.getItem('overhead.svcUsage2')||'{}')|
 if(!SVU.adb){try{var _o=JSON.parse(localStorage.getItem('overhead.adbUsage')||'null');if(_o)SVU.adb=_o;}catch(e){}}
 function svcU(id){var u=SVU[id]||(SVU[id]={}),d=todayStr(),m=d.slice(0,7);if(u.month!==m){u.month=m;u.m=0;}if(u.day!==d){u.day=d;u.n=0;u.bn=0;}return u;}
 function saveSvcU(){try{localStorage.setItem('overhead.svcUsage2',JSON.stringify(SVU));}catch(e){}}
-function svcUsable(d){var u=svcU(d.id);return !!S[d.key]&&Date.now()>=(u.pausedUntil||0)&&u.n<S[d.day]&&u.m<S[d.month];}
-function svcPause(d,until,why){var u=svcU(d.id);u.pausedUntil=until;u.why=why;saveSvcU();}
+function svcUsable(d){var u=svcU(d.id);if(/key/.test(u.why||'')&&u.refusedKey!==S[d.key]){u.pausedUntil=0;u.why='';saveSvcU();}return !!S[d.key]&&Date.now()>=(u.pausedUntil||0)&&u.n<S[d.day]&&u.m<S[d.month];}
+function svcPause(d,until,why){var u=svcU(d.id);u.pausedUntil=until;u.why=why;if(/key/.test(why||''))u.refusedKey=S[d.key];saveSvcU();}
 function svcFetch(url,headers){
   var ctl=(typeof AbortController!=='undefined')?new AbortController():null,opts={headers:headers||{}};
   if(ctl)opts.signal=ctl.signal;
@@ -663,7 +664,7 @@ function alErr(j){
 }
 function alBulkDue(){
   if(DEMO||!S.alKey||!S.alBulk||S.lat==null)return false;
-  var d=SVC_BY.airlabs,u=svcU('airlabs');
+  var d=SVC_BY.airlabs;svcUsable(d);var u=svcU('airlabs');
   if(Date.now()<(u.pausedUntil||0)||(u.bn||0)>=S.alBulkDay||u.m>=S[d.month])return false;
   return !(ALSNAP&&ALSNAP.t>=lastSlotTime()&&Math.abs(ALSNAP.lat-S.lat)<0.01&&Math.abs(ALSNAP.lon-S.lon)<0.01);
 }
@@ -714,12 +715,12 @@ function saveSvcR(){
   try{SVCS.forEach(function(d){var m=SVR[d.id],ks=Object.keys(m);if(ks.length>300)ks.sort(function(a,b){return m[a].t-m[b].t;}).slice(0,ks.length-200).forEach(function(x){delete m[x];});});
     localStorage.setItem('overhead.svcRoutes',JSON.stringify(SVR));}catch(e){}
 }
-function svcCached(d,p){var c=SVR[d.id][p.hex+'|'+(p.cs||'')];return c&&(c.pending||Date.now()-c.t<8*3600e3)?c:null;}
+function svcCached(d,p){var c=SVR[d.id][p.hex+'|'+(p.cs||'')];if(c&&c.st==='err'&&c.key!==S[d.key])return null;return c&&(c.pending||Date.now()-c.t<8*3600e3)?c:null;}
 function svcLookup(d,p){
   var k=p.hex+'|'+(p.cs||''),u=svcU(d.id);
   svcBusy=true;SVR[d.id][k]={t:Date.now(),pending:true};
   u.n++;u.m++;saveSvcU();
-  function done(v,age){svcBusy=false;v.t=Date.now()-(age||0);SVR[d.id][k]=v;saveSvcR();renderPanel();}
+  function done(v,age){svcBusy=false;v.t=Date.now()-(age||0);v.key=S[d.key];SVR[d.id][k]=v;saveSvcR();renderPanel();}
   d.call(p,S[d.key]).then(function(v){done(v||{st:'none'});},function(e){
     if(e&&e.pause){svcPause(d,e.pause,e.why);done({st:'err'},8*3600e3);}   // not cached: next service gets a turn now
     else done({st:'err'},8*3600e3-10*60e3);                                // network trouble: try this one again in 10 min
@@ -1194,8 +1195,8 @@ function openSettings(){
   $('fAlert').value=S.alertMi;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
   $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;$('fAlB').checked=!!S.alBulk;$('fAlBD').value=S.alBulkDay;
   var su=svcU('airlabs');$('alSnapStat').textContent=S.alKey&&S.alBulk?('Snapshots today '+(su.bn||0)+' / '+S.alBulkDay+(ALSNAP?' \u00b7 last at '+new Date(ALSNAP.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+', '+ALSNAP.n+' flights with routes':' \u00b7 none yet')):'';
-  $('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
-  var fu=fiaU();$('fiaStat').textContent=S.fiaKey?('Used this month: '+fmtInt(fu.m)+' / '+fmtInt(S.fiaCap)+' \u00b7 history '+fiaDays()+' days'+(fu.lastErr?' \u00b7 last error: '+fu.lastErr:'')+(Date.now()<(fu.pausedUntil||0)?' \u00b7 paused ('+fu.why+') until '+new Date(fu.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 using adsb.lol / adsb.fi and the community route database.';
+  svcUsable(SVC_BY.airlabs);svcUsable(SVC_BY.adb);$('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
+  fiaUsable();var fu=fiaU();$('fiaStat').textContent=S.fiaKey?('Used this month: '+fmtInt(fu.m)+' / '+fmtInt(S.fiaCap)+' \u00b7 history '+fiaDays()+' days'+(fu.lastErr?' \u00b7 last error: '+fu.lastErr:'')+(Date.now()<(fu.pausedUntil||0)?' \u00b7 paused ('+fu.why+') until '+new Date(fu.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 using adsb.lol / adsb.fi and the community route database.';
   $('bClose').style.display=S.lat==null?'none':'';$('geoMsg').textContent='';
   $('settings').style.display='block';
 }
