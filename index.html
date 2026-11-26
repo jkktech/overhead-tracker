@@ -195,7 +195,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.13';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.14';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -298,9 +298,17 @@ function fiaGet(path){
       var e=new Error('rate limited');e.status=429;throw e;
     }
     if(r.status===401){u.pausedUntil=nextMidnight();u.why='key refused';saveFiaU();}
-    if(!r.ok){var er=new Error('HTTP '+r.status);er.status=r.status;throw er;}
+    if(!r.ok){
+      return r.json().catch(function(){return {};}).then(function(b){
+        var er=new Error('HTTP '+r.status);er.status=r.status;er.body=b||{};
+        if(r.status===403&&er.body.code==='flights-depth'){u.m=Math.max(0,u.m-1);}   // FlyItalyADSB doesn't count these
+        u.lastErr='HTTP '+r.status+(er.body.code?' '+er.body.code:'')+' at '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});saveFiaU();
+        throw er;
+      });
+    }
+    u.lastErr='';
     return r.json();
-  },function(e){clearTimeout(t);throw e;});
+  },function(e){clearTimeout(t);u.lastErr='no response ('+(e&&e.name==='AbortError'?'timed out':'blocked or offline')+') at '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});saveFiaU();throw e;});
 }
 var PROVIDERS=[
   {id:'adsblol',name:'adsb.lol',url:function(la,lo,nm){return 'https://api.adsb.lol/v2/point/'+la+'/'+lo+'/'+nm;}},
@@ -528,12 +536,19 @@ function legFromCodes(from,to){
 var FIA_USUAL={};try{FIA_USUAL=JSON.parse(localStorage.getItem('overhead.fiaUsual')||'{}')||{};}catch(e){FIA_USUAL={};}
 for(var _k in FIA_USUAL)if(FIA_USUAL[_k].pending)delete FIA_USUAL[_k];
 var fiaUsualBusy=false;
+function fiaDays(){var d=7;try{d=parseInt(localStorage.getItem('overhead.fiaDays'),10)||7;}catch(e){}return Math.max(1,Math.min(14,d));}
+function setFiaDays(d){try{localStorage.setItem('overhead.fiaDays',String(d));}catch(e){}}
 function fiaUsual(cs){
   var c=FIA_USUAL[cs];
   if(c&&(c.pending||Date.now()-c.t<6*3600e3))return c;
   if(fiaUsualBusy||!fiaUsable()||Date.now()-fiaLastCall<2500)return null;   // stay far under 30/min
   fiaUsualBusy=true;FIA_USUAL[cs]={t:Date.now(),pending:true,list:[]};
-  fiaGet('/v2/flights/callsign/'+encodeURIComponent(cs)+'?days=14').then(function(j){
+  function ask(){return fiaGet('/v2/flights/callsign/'+encodeURIComponent(cs)+'?days='+fiaDays());}
+  ask().catch(function(e){
+    var md=e&&e.status===403&&e.body&&parseInt(e.body.max_days,10);
+    if(md>=1&&md<fiaDays()){setFiaDays(md);return ask();}   // learned the plan's history depth - try again
+    throw e;
+  }).then(function(j){
     var list=(j&&j.usual)||[];
     list.sort(function(a,b){return (b.count||0)-(a.count||0);});
     return {ok:true,list:list};
@@ -1180,7 +1195,7 @@ function openSettings(){
   $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;$('fAlB').checked=!!S.alBulk;$('fAlBD').value=S.alBulkDay;
   var su=svcU('airlabs');$('alSnapStat').textContent=S.alKey&&S.alBulk?('Snapshots today '+(su.bn||0)+' / '+S.alBulkDay+(ALSNAP?' \u00b7 last at '+new Date(ALSNAP.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+', '+ALSNAP.n+' flights with routes':' \u00b7 none yet')):'';
   $('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
-  var fu=fiaU();$('fiaStat').textContent=S.fiaKey?('Used this month: '+fmtInt(fu.m)+' / '+fmtInt(S.fiaCap)+(Date.now()<(fu.pausedUntil||0)?' \u00b7 paused ('+fu.why+') until '+new Date(fu.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 using adsb.lol / adsb.fi and the community route database.';
+  var fu=fiaU();$('fiaStat').textContent=S.fiaKey?('Used this month: '+fmtInt(fu.m)+' / '+fmtInt(S.fiaCap)+' \u00b7 history '+fiaDays()+' days'+(fu.lastErr?' \u00b7 last error: '+fu.lastErr:'')+(Date.now()<(fu.pausedUntil||0)?' \u00b7 paused ('+fu.why+') until '+new Date(fu.pausedUntil).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'}):'')):'No key \u2013 using adsb.lol / adsb.fi and the community route database.';
   $('bClose').style.display=S.lat==null?'none':'';$('geoMsg').textContent='';
   $('settings').style.display='block';
 }
