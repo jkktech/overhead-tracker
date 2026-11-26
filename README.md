@@ -40,6 +40,7 @@ starts, so restart Fully Kiosk (or reboot) after pushing. Supported keys include
      Each pauses until tomorrow on any quota/limit/key reply; each flight is looked up once (cached 8 h).
   4. Free community route DB (only when FlyItalyADSB isn't available)
   5. Otherwise "Route unknown" - no guessing.
+- Owner of private/GA/medical/government aircraft: free adsbdb aircraft lookup (card plane only, cached 30 days), tagged Air ambulance / Police / Military.
 - Airport coordinates: `airports.json`, built from OurAirports (public domain) by `tools/mk_airports.py`.
 - Aircraft silhouettes: `shapes/`, from [AircraftShapesSVG](https://github.com/RexKramer1/AircraftShapesSVG) by RexKramer1 and contributors, **GPL-3.0** (see `shapes/LICENSE` and `shapes/NOTICE.md`), prepared by `tools/norm_shapes.py`.
 

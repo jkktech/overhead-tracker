@@ -197,7 +197,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.16';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.25.17';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
@@ -393,6 +393,7 @@ function ingest(list){
     p.reg=a.r||p.reg||'';
     p.type=a.t||p.type||'';
     p.desc=a.desc||p.desc||'';
+    p.own=a.ownOp||p.own||'';
     p.ground=ground;
     p.alt=ground?0:(typeof a.alt_baro==='number'?a.alt_baro:(typeof a.alt_geom==='number'?a.alt_geom:null));
     p.gs=typeof a.gs==='number'?a.gs:null;
@@ -898,6 +899,7 @@ function drawRadar(arr,now){
   for(i=1;i<=3;i++){
     var rr=R*i/3;if(i<3){c.beginPath();c.arc(cx,cy,rr,0,Math.PI*2);c.stroke();}
     var lab=(S.radius*i/3);lab=(lab<10?Math.round(lab*10)/10:Math.round(lab))+' mi';
+    c.save();c.fillStyle='rgba(4,10,14,.55)';var lw2=c.measureText(lab).width;c.fillRect(cx+rr*0.71+u*0.3,cy-rr*0.71-u*2.8,lw2+u*0.6,u*2.9);c.restore();
     c.fillText(lab,cx+rr*0.71+u*0.6,cy-rr*0.71);
   }
   c.beginPath();c.moveTo(cx-R,cy);c.lineTo(cx+R,cy);c.moveTo(cx,cy-R);c.lineTo(cx,cy+R);c.strokeStyle='rgba(62,230,170,.09)';c.stroke();
@@ -963,8 +965,13 @@ function drawRadar(arr,now){
     if(showLabels||sel){
       c.font=(sel?'bold ':'')+(sel?3.4:2.5)*u+'px Roboto,Arial';c.textAlign='left';c.textBaseline='middle';
       c.fillStyle=sel?'#ffffff':'rgba(190,205,220,.75)';
-      c.fillText(p.cs||p.reg||p.hex.toUpperCase(),xy[0]+u*(sel?6.6:3.8),xy[1]-u*(sel?2.6:1.7));
-      if(sel&&p.alt!=null&&!p.ground){c.font=(2.6*u)+'px Roboto,Arial';c.fillStyle=col;c.fillText(fmtInt(p.alt)+' ft',xy[0]+u*6.6,xy[1]+u*1.2);}
+      var lbl=p.cs||p.reg||p.hex.toUpperCase(),off=u*(sel?6.6:3.8),lw=c.measureText(lbl).width;
+      var left=xy[0]+off+lw>W-u*1.5;                       // would be cut off at the right edge
+      c.textAlign=left?'right':'left';
+      var lx=left?xy[0]-off:xy[0]+off;
+      c.fillText(lbl,lx,xy[1]-u*(sel?2.6:1.7));
+      if(sel&&p.alt!=null&&!p.ground){c.font=(2.6*u)+'px Roboto,Arial';c.fillStyle=col;c.fillText(fmtInt(p.alt)+' ft',lx,xy[1]+u*1.2);}
+      c.textAlign='left';
     }
     hitList.push([xy[0],xy[1],p.hex]);
   });
@@ -1016,6 +1023,38 @@ cv.addEventListener('click',function(e){
 });
 
 /* ---------------- panel ---------------- */
+/* ---------------- registered owner for private / GA / medical / government aircraft ----------------
+   Free adsbdb aircraft lookup by transponder code, only for the card plane, cached 30 days. */
+var OWN={};try{OWN=JSON.parse(localStorage.getItem('overhead.owners')||'{}')||{};}catch(e){OWN={};}
+var ownBusy=false;
+function ownerFor(p,allowLookup){
+  if(p.own)return p.own;
+  var c=OWN[p.hex];
+  if(c&&(c.pending&&Date.now()-c.t<60e3||Date.now()-c.t<30*86400e3))return c.o||'';
+  if(!allowLookup||ownBusy||DEMO)return '';
+  ownBusy=true;OWN[p.hex]={t:Date.now(),pending:true};
+  fetchJSON('https://api.adsbdb.com/v0/aircraft/'+encodeURIComponent(p.hex),8000).then(function(j){
+    var a=j&&j.response&&j.response.aircraft;return a&&a.registered_owner||'';
+  },function(e){return e&&e.status===404?'':null;}).then(function(o){
+    ownBusy=false;
+    if(o===null){delete OWN[p.hex];return;}                  // network trouble: try again later
+    OWN[p.hex]={t:Date.now(),o:o};
+    try{var k=Object.keys(OWN);if(k.length>500)k.sort(function(a,b){return OWN[a].t-OWN[b].t;}).slice(0,k.length-400).forEach(function(x){delete OWN[x];});
+      localStorage.setItem('overhead.owners',JSON.stringify(OWN));}catch(e){}
+    renderPanel();
+  });
+  return '';
+}
+function ownerLabel(o){
+  if(!o)return '';
+  var t=titleCase(o).replace(/\b(Llc|Inc|Ems|Usa|Us|Faa|Dps|Lp|Ltd|Corp|Co)\b/g,function(w){return {Llc:'LLC',Inc:'Inc',Ems:'EMS',Usa:'USA',Us:'US',Faa:'FAA',Dps:'DPS',Lp:'LP',Ltd:'Ltd',Corp:'Corp',Co:'Co'}[w];});
+  var u=o.toUpperCase(),tag='';
+  if(/\bEVAC|\bEMS\b|LIFE ?FLIGHT|CARE ?FLIGHT|AIR ?MED|MEDICAL|HOSPITAL|AMBULANCE|LIFENET|MEDSTAR|AIR METHODS|PHI AIR/.test(u))tag='Air ambulance';
+  else if(/POLICE|SHERIFF|PUBLIC SAFETY|\bDPS\b|HIGHWAY PATROL|LAW ENFORCEMENT|CUSTOMS|BORDER/.test(u))tag='Police';
+  else if(/UNITED STATES (AIR FORCE|ARMY|NAVY|MARINE)|\bUSAF\b|NATIONAL GUARD|DEPT OF DEFENSE/.test(u))tag='Military';
+  return tag?tag+' · '+t:t;
+}
+
 function airlineInfo(p,rt){
   var pre=(p.cs||'').slice(0,3),isAir=/^[A-Z]{3}\d/.test(p.cs||''),ai=AIRLINES[pre];
   return {name:(rt&&rt.airline)||(ai&&isAir?ai[0]:''),iata:(rt&&rt.iata)||(ai&&isAir?ai[1]:''),brand:isAir&&BRAND[pre]?BRAND[pre]:'#ffb020'};
@@ -1043,7 +1082,8 @@ function renderPanel(){
     if(p.hex!==shownHex){var card=$('card');card.classList.remove('swap');void card.offsetWidth;card.classList.add('swap');shownHex=p.hex;}
     var RI=routeInfo(p,true),ai=airlineInfo(p,RI.rt);
     setBrand(ai.brand);setCardShape(p,ai.brand);
-    $('airline').textContent=ai.name||(p.cs?'Private / unknown operator':'No callsign');
+    var own=ai.name?'':ownerLabel(ownerFor(p,true));
+    $('airline').textContent=ai.name||own||(p.cs?'Private / unknown operator':'No callsign');
     $('flight').textContent=p.cs||p.reg||p.hex.toUpperCase();
     var logo=ai.iata?'https://images.kiwi.com/airlines/128/'+ai.iata+'.png':'';
     if(logo!==lastLogo){lastLogo=logo;var im=$('logo');im.style.display='none';if(logo){im.onload=function(){im.style.display='block';};im.onerror=function(){im.style.display='none';};im.src=logo;}}
@@ -1059,7 +1099,7 @@ function renderPanel(){
       $('route').style.display='none';$('noroute').style.display='block';
       $('noroute').textContent=RI.pending?'Looking up route\u2026':'Route unknown';
     }
-    $('rsrc').textContent=leg&&RI.src?'Route: '+RI.src:(RI.pending?'':'Route: no source had a match');
+    $('rsrc').textContent=leg&&RI.src?'Route: '+RI.src:(RI.pending||!/^[A-Z]{3}\d/.test(p.cs||'')?'':'Route: no source had a match');
     var vr=p.vr>350?' <span class="up">▲</span>':(p.vr<-350?' <span class="dn">▼</span>':'');
     $('sAlt').innerHTML=p.ground?'On ground':(p.alt==null?'–':fmtInt(p.alt)+' ft'+vr);
     $('sSpd').textContent=p.gs==null?'–':fmtInt(p.gs*1.15078)+' mph';
