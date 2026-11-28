@@ -346,7 +346,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.28.1222';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.1233';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true,perVisit:3};
@@ -1106,13 +1106,17 @@ function drawRadar(arr,now){
     if(sel){
       var pr=S.anim?Math.sin(now/280)*0.7:0;
       c.strokeStyle='rgba(255,255,255,.9)';c.lineWidth=u*0.4;c.beginPath();c.arc(0,0,u*(5.6+pr),0,Math.PI*2);c.stroke();
-      if(S.anim){c.shadowColor=col;c.shadowBlur=u*3;}
+      // soft glow as a plain radial gradient: canvas shadowBlur flickers / draws stray squares in Android WebView
+      var gr=c.createRadialGradient(0,0,u*1.5,0,0,u*6.2),rgb=hexRGB(col.charAt(0)==='#'?col:'#ffb020');
+      if(col.charAt(0)!=='#'){var mm=/(\d+)\D+(\d+)%\D+(\d+)%/.exec(col);if(mm){gr.addColorStop(0,'hsla('+mm[1]+','+mm[2]+'%,'+mm[3]+'%,.55)');gr.addColorStop(1,'hsla('+mm[1]+','+mm[2]+'%,'+mm[3]+'%,0)');}}
+      else{gr.addColorStop(0,'rgba('+rgb.join(',')+',.55)');gr.addColorStop(1,'rgba('+rgb.join(',')+',0)');}
+      c.fillStyle=gr;c.beginPath();c.arc(0,0,u*6.2,0,Math.PI*2);c.fill();
     }
     c.rotate((p.trk||0)*D2R);
     var tinted=shapeTinted(shapeCode(p),col);
-    if(tinted){var sz=u*(sel?10:6.8);c.drawImage(tinted,-sz/2,-sz/2,sz,sz);c.shadowBlur=0;}
+    if(tinted){var sz=u*(sel?10:6.8);c.drawImage(tinted,-sz/2,-sz/2,sz,sz);}
     else{planePath(c,u*(sel?4.2:2.8));
-      c.fillStyle=col;c.fill();c.shadowBlur=0;c.lineWidth=u*0.3;c.strokeStyle='rgba(3,5,8,.9)';c.stroke();}
+      c.fillStyle=col;c.fill();c.lineWidth=u*0.3;c.strokeStyle='rgba(3,5,8,.9)';c.stroke();}
     c.restore();
     if(showLabels||sel){
       c.font=(sel?'bold ':'')+(sel?3.4:2.5)*u+'px Roboto,Arial';c.textAlign='left';c.textBaseline='middle';
