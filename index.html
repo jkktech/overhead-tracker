@@ -125,7 +125,9 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 #wxTop{display:flex;gap:1.6vh;height:22vh}
 #wxNow{flex:1.3;display:flex;align-items:center;gap:3.2vh}
 #wxIcon svg{width:12vh;height:12vh;display:block}
-#wxTemp{font-size:10vh;font-weight:500;line-height:1}
+#wxTemp{font-size:9vh;font-weight:500;line-height:1}
+#wxPlace{display:flex;align-items:center;gap:.8vh;font-size:3vh;font-weight:600;color:#c4ccd6;margin-bottom:.8vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vh}
+#wxPlace svg{width:2.8vh;height:2.8vh;flex:0 0 auto}
 #wxDesc{font-size:3.4vh;margin-top:.8vh;white-space:nowrap}#wxDesc span{color:var(--dim)}
 #wxDet{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8vh 2.4vh;align-content:center}
 .kv .k{font-size:2.2vh;letter-spacing:.12em;color:var(--dim);white-space:nowrap}.kv .v{font-size:3.8vh;font-weight:600;white-space:nowrap}
@@ -237,7 +239,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 
     <section class="scr" id="scrWx">
       <div id="wxTop">
-        <div class="wb" id="wxNow"><div id="wxIcon"></div><div><div id="wxTemp"></div><div id="wxDesc"></div></div></div>
+        <div class="wb" id="wxNow"><div id="wxIcon"></div><div style="min-width:0"><div id="wxPlace"></div><div id="wxTemp"></div><div id="wxDesc"></div></div></div>
         <div class="wb" id="wxDet">
           <div class="kv"><div class="k">HUMIDITY</div><div class="v" id="wxHum"></div></div>
           <div class="kv"><div class="k">PRESSURE</div><div class="v" id="wxPr"></div></div>
@@ -324,7 +326,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.28.0001';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.0021';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true};
@@ -1202,6 +1204,7 @@ function renderPanel(){
   rotTick(now);
   var on=SCR[cur]?SCR[cur].id:'';
   if(on==='radar'&&!S.anim)drawRadar(arr,now);
+  var plc=S.name||(wxPlace()!=='Your location'?wxPlace():'Overhead');if($('place').textContent!==plc)$('place').textContent=plc;
   $('count').textContent=arr.length?arr.length+(arr.length===1?' plane':' planes'):'';
   $('count').style.display=arr.length?'':'none';
   var p=selectedHex&&planes[selectedHex],selLeg=null;rsrcTxt='';
@@ -1263,7 +1266,7 @@ function renderPanel(){
   else{$('foot').className='';txt=(srcName?'Data: '+srcName+' · ':'')+(lastOK?'updated '+Math.round((now-lastOK)/1000)+' s ago':'connecting…');}
   if(on==='plane'&&rsrcTxt&&!lastErr)txt=rsrcTxt+' · '+txt;
   if(on==='stats'&&!lastErr)txt='Counted on this device · resets at midnight';
-  if(on==='wx'&&WX&&!lastErr)txt='Weather: Open-Meteo.com (CC BY 4.0) · updated '+clockTxt(WX.t);
+  if(on==='wx'&&WX&&!lastErr)txt='Forecast for '+coordTxt()+' · Open-Meteo.com (CC BY 4.0) · updated '+clockTxt(WX.t);
   $('stTxt').textContent=txt;
   var paused=now<manualUntil,nx=nextOk(cur);
   $('nextTxt').textContent=!S.rotate?'':(paused?'Paused \u00b7 rotating again in '+Math.ceil((manualUntil-now)/1000)+' s':(nx!==cur?'next: '+SCR[nx].title:''));
@@ -1520,11 +1523,26 @@ function wxInfo(code,day){
   if(c>=95)return ['Thunderstorm','storm'];
   return ['–','cloud'];
 }
+var wxPlaceKey='',wxPlaceTxt='';
+function nearTown(lat,lon){   // nearest named place from airports.json (OurAirports municipality), within 15 mi
+  if(!AIRDB)return '';
+  var best='',bd=15,k,a,d;
+  for(k in AIRDB){a=AIRDB[k];if(!a[4]||k!==a[0])continue;if(Math.abs(a[2]-lat)>0.3)continue;
+    d=distMi(lat,lon,a[2],a[3]);if(d<bd){bd=d;best=a[4];}}
+  return best;
+}
+function wxPlace(){
+  var key=S.name+'|'+S.lat+'|'+S.lon+'|'+(AIRDB?1:0);
+  if(key!==wxPlaceKey){wxPlaceKey=key;var t=nearTown(+S.lat,+S.lon);wxPlaceTxt=S.name||(t?'Near '+t:'Your location');}
+  return wxPlaceTxt;
+}
+function coordTxt(){var la=+S.lat,lo=+S.lon;return Math.abs(la).toFixed(2)+'°'+(la>=0?'N':'S')+', '+Math.abs(lo).toFixed(2)+'°'+(lo>=0?'E':'W');}
 function renderWx(){
   if(!WX)return;
   var j=WX.j,c=j.current,cu=j.current_units||{},h=j.hourly||{},d=j.daily||{},i;
   var info=wxInfo(c.weather_code,c.is_day);
   $('wxIcon').innerHTML=WXI[info[1]];
+  $('wxPlace').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.4 7-12a7 7 0 0 0-14 0c0 5.6 7 12 7 12z" fill="none" stroke="#3ee6aa" stroke-width="2"/><circle cx="12" cy="10" r="2.6" fill="#3ee6aa"/></svg>'+esc(wxPlace());
   $('wxTemp').textContent=Math.round(c.temperature_2m)+'°F';
   $('wxDesc').innerHTML=esc(info[0])+' <span>· feels '+Math.round(c.apparent_temperature)+'°</span>';
   $('wxHum').textContent=Math.round(c.relative_humidity_2m)+'%';
