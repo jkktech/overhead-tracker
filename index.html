@@ -89,6 +89,7 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 .spark{width:24vh;height:7vh;flex:0 0 auto;display:block}
 .tile .vs{min-width:0}.tile .vs .s{text-align:left;margin-top:.6vh}
 .drow>.ic{width:6.4vh;height:6.4vh;color:#f6a24a}
+#dAirLogo{width:8vh;height:8vh;border-radius:1.8vh;background:#fff;object-fit:contain;padding:.6vh;display:none;flex:0 0 auto}
 .wb.kv{display:flex;align-items:center;gap:2vh}.wb.kv>.ic{width:5.6vh;height:5.6vh;color:#9fb0c3}.wb.kv .tx{min-width:0}
 .st{background:rgba(255,255,255,.06);border-radius:2.4vh;padding:1.7vh 2.4vh;min-width:0}
 .st.w2{grid-column:span 2}
@@ -246,7 +247,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
         </div></div>
       <div class="col" id="dayCol"><div class="h2" style="color:#f6a24a">TODAY <span>&middot; since midnight</span></div>
         <div class="drow"><span class="ic" data-ic="cal"></span><div class="t"><div class="k">AIRCRAFT SEEN</div><div class="v" id="dSeen" style="font-size:7vh;font-weight:700"></div></div><div id="bars"></div></div>
-        <div class="drow"><span class="ic" data-ic="medal"></span><div class="t"><div class="k">TOP AIRLINE</div><div class="v" id="dAir"></div></div><span class="s" id="dAirN"></span></div>
+        <div class="drow"><span class="ic" data-ic="medal"></span><div class="t"><div class="k">TOP AIRLINE</div><div class="v" id="dAir"></div><div class="s" id="dAirN" style="text-align:left"></div></div><img id="dAirLogo" alt=""></div>
         <div class="drow"><span class="ic" data-ic="plane"></span><div class="t"><div class="k">TOP AIRCRAFT TYPE</div><div class="v" id="dTy"></div></div><span class="s" id="dTyN"></span></div>
         <div class="drow"><span class="ic" data-ic="tower"></span><div class="t"><div class="k">TOP DESTINATION</div><div class="v" id="dDe"></div></div><span class="s" id="dDeN"></span></div>
       </div>
@@ -341,7 +342,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.28.0034';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.1204';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true};
@@ -1512,7 +1513,7 @@ function tally(now){
     var p=planes[hex];
     if(!T.seen[hex]){
       T.seen[hex]=1;T.n++;T.hours[h]=(T.hours[h]||0)+1;todayDirty=true;
-      var ai=airlineInfo(p,null);if(ai.name)T.al[ai.name]=(T.al[ai.name]||0)+1;
+      var ai=airlineInfo(p,null);if(ai.name){T.al[ai.name]=(T.al[ai.name]||0)+1;(T.alCode=T.alCode||{})[ai.name]=(p.cs||'').slice(0,3);}
       var tn=typeName(p);if(tn&&tn!=='Unknown')T.ty[tn]=(T.ty[tn]||0)+1;
     }
     if(!p.ground){var d=distMi(S.lat,S.lon,p.lat,p.lon);if(!T.close||d<T.close.d){T.close={d:d,cs:p.cs||p.reg||hex.toUpperCase(),t:now};todayDirty=true;}}
@@ -1524,6 +1525,15 @@ function tallyDest(p,leg){
   T.destSeen[p.hex]=1;var k=leg.d+(leg.dc?' · '+leg.dc:'');T.dest[k]=(T.dest[k]||0)+1;todayDirty=true;saveToday();
 }
 function topOf(o){var bk='',bn=0;for(var k in o)if(o[k]>bn){bn=o[k];bk=k;}return bn?[bk,bn]:null;}
+var topLogo='';
+function topAirlineLogo(name){
+  var T=today(),code=T.alCode&&T.alCode[name];
+  if(name&&!code)for(var k in AIRLINES)if(AIRLINES[k][0]===name){code=k;break;}   // tallies from before codes were kept
+  var ai=code&&AIRLINES[code],iata=ai?ai[1]:'',url=iata?'https://images.kiwi.com/airlines/128/'+iata+'.png':'',im=$('dAirLogo');
+  var b=code&&BRAND[code]?BRAND[code]:'';im.style.boxShadow=b?'0 0 2.4vh '+b:'none';
+  if(url===topLogo)return;topLogo=url;im.style.display='none';
+  if(url){im.onload=function(){im.style.display='block';};im.onerror=function(){im.style.display='none';};im.src=url;}
+}
 function setT(id,v,sub){$(id).textContent=v;$(id+'s').innerHTML=sub||'';}
 function renderStats(arr,now){
   var air=arr.filter(function(p){return !p.ground;}),T=today(),i;
@@ -1547,6 +1557,7 @@ function renderStats(arr,now){
   $('bars').innerHTML=bh;
   var ta=topOf(T.al),tt=topOf(T.ty),td=topOf(T.dest);
   $('dAir').textContent=ta?ta[0]:'–';$('dAirN').textContent=ta?ta[1]+(ta[1]===1?' flight':' flights'):'';
+  topAirlineLogo(ta?ta[0]:'');
   $('dTy').textContent=tt?tt[0]:'–';$('dTyN').textContent=tt?tt[1]+' aircraft':'';
   $('dDe').textContent=td?td[0]:'–';$('dDeN').textContent=td?td[1]+(td[1]===1?' flight':' flights'):'';
 }
