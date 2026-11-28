@@ -249,6 +249,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
         <div class="drow"><span class="ic" data-ic="cal"></span><div class="t"><div class="k">AIRCRAFT SEEN</div><div class="v" id="dSeen" style="font-size:7vh;font-weight:700"></div></div><div id="bars"></div></div>
         <div class="drow"><span class="ic" data-ic="medal"></span><div class="t"><div class="k">TOP AIRLINE</div><div class="v" id="dAir"></div><div class="s" id="dAirN" style="text-align:left"></div></div><img id="dAirLogo" alt=""></div>
         <div class="drow"><span class="ic" data-ic="plane"></span><div class="t"><div class="k">TOP AIRCRAFT TYPE</div><div class="v" id="dTy"></div></div><span class="s" id="dTyN"></span></div>
+        <div class="drow"><span class="ic" data-ic="dep"></span><div class="t"><div class="k">TOP DEPARTURE</div><div class="v" id="dOr"></div></div><span class="s" id="dOrN"></span></div>
         <div class="drow"><span class="ic" data-ic="tower"></span><div class="t"><div class="k">TOP DESTINATION</div><div class="v" id="dDe"></div></div><span class="s" id="dDeN"></span></div>
       </div>
     </section>
@@ -342,7 +343,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.28.1204';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.1206';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true};
@@ -1313,6 +1314,7 @@ var ICO={
   target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.3" class="f"/>',
   cal:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M7.5 14h2M11 14h2M14.5 14h2M7.5 17h2M11 17h2"/>',
   medal:'<circle cx="12" cy="14.5" r="5.5"/><path d="M8.6 10.2L6 3h4l2 4.2L14 3h4l-2.6 7.2"/><path d="M12 12.2l.8 1.6 1.7.2-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.2z" class="f"/>',
+  dep:'<path class="f" d="M2.5 19h19v2h-19v-2zm19.57-9.36c-.21-.8-1.04-1.28-1.84-1.06L14.92 10l-6.9-6.43-1.93.51 4.14 7.17-4.97 1.33-1.97-1.54-1.45.39 1.82 3.16.77 1.33 1.6-.43 5.31-1.42 4.35-1.16L19.79 11c.81-.23 1.28-1.05 1.07-1.85z"/>',
   tower:'<path d="M9.5 21l1-9.5h3l1 9.5M6.5 7h11l-2.2 4.5H8.7zM12 3v4M7 21h10"/>',
   rain:'<path d="M7 15h10.5a4.2 4.2 0 0 0 .4-8.4A6 6 0 0 0 5.8 6.9 4.1 4.1 0 0 0 7 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
   cloud:'<path d="M7 19h10.5a4.5 4.5 0 0 0 .4-9A6.5 6.5 0 0 0 5.6 9.6 4.8 4.8 0 0 0 7 19z"/>',
@@ -1502,7 +1504,7 @@ function dayKey(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'
 function today(){
   var k=dayKey();
   if(!TODAY){try{TODAY=JSON.parse(localStorage.getItem('overhead.today')||'null');}catch(e){TODAY=null;}}
-  if(!TODAY||TODAY.day!==k){TODAY={day:k,seen:{},n:0,hours:[],al:{},ty:{},dest:{},destSeen:{},close:null};todayDirty=true;}
+  if(!TODAY||TODAY.day!==k){TODAY={day:k,seen:{},n:0,hours:[],al:{},ty:{},dest:{},orig:{},destSeen:{},close:null};todayDirty=true;}
   return TODAY;
 }
 function saveToday(){if(!todayDirty)return;todayDirty=false;try{localStorage.setItem('overhead.today',JSON.stringify(TODAY));}catch(e){}}
@@ -1522,7 +1524,8 @@ function tally(now){
 }
 function tallyDest(p,leg){
   if(DEMO||!leg||!leg.d)return;var T=today();if(T.destSeen[p.hex])return;
-  T.destSeen[p.hex]=1;var k=leg.d+(leg.dc?' · '+leg.dc:'');T.dest[k]=(T.dest[k]||0)+1;todayDirty=true;saveToday();
+  T.destSeen[p.hex]=1;var k=leg.d+(leg.dc?' · '+leg.dc:'');T.dest[k]=(T.dest[k]||0)+1;
+  if(leg.o){var ko=leg.o+(leg.oc?' · '+leg.oc:'');T.orig=T.orig||{};T.orig[ko]=(T.orig[ko]||0)+1;}todayDirty=true;saveToday();
 }
 function topOf(o){var bk='',bn=0;for(var k in o)if(o[k]>bn){bn=o[k];bk=k;}return bn?[bk,bn]:null;}
 var topLogo='';
@@ -1555,7 +1558,8 @@ function renderStats(arr,now){
   var mx=1,h=new Date(now).getHours(),bh='';for(i=0;i<24;i++)mx=Math.max(mx,T.hours[i]||0);
   for(i=0;i<24;i++)bh+='<i class="'+(i===h?'now':(i<h?'past':''))+'" style="height:'+Math.round(((T.hours[i]||0)/mx)*100)+'%"></i>';
   $('bars').innerHTML=bh;
-  var ta=topOf(T.al),tt=topOf(T.ty),td=topOf(T.dest);
+  var ta=topOf(T.al),tt=topOf(T.ty),td=topOf(T.dest),to=topOf(T.orig||{});
+  $('dOr').textContent=to?to[0]:'–';$('dOrN').textContent=to?to[1]+(to[1]===1?' flight':' flights'):'';
   $('dAir').textContent=ta?ta[0]:'–';$('dAirN').textContent=ta?ta[1]+(ta[1]===1?' flight':' flights'):'';
   topAirlineLogo(ta?ta[0]:'');
   $('dTy').textContent=tt?tt[0]:'–';$('dTyN').textContent=tt?tt[1]+' aircraft':'';
