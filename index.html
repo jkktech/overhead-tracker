@@ -59,6 +59,7 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 #distPill.oh{color:#04110b;background:var(--ok);box-shadow:0 0 2.4vh var(--ok);animation:pulse 1.4s infinite}
 @keyframes pulse{50%{opacity:.5}}
 #tracked{font-size:2.6vh;color:var(--dim);white-space:nowrap}
+#pIdx{display:flex;gap:.8vh;margin-top:.4vh}#pIdx i{display:block;width:3.2vh;height:.8vh;border-radius:.4vh;background:rgba(255,255,255,.18)}#pIdx i.on{background:var(--brand);box-shadow:0 0 1vh var(--brand)}
 #route{display:flex;align-items:flex-start;gap:2.6vh}
 .ap{flex:0 0 auto;width:24vh;min-width:0}
 .ap .code{font-size:7.8vh;font-weight:800;line-height:1}
@@ -206,7 +207,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
         <div id="cardTop">
           <div id="cardMain">
             <div id="airRow"><img id="logo" alt=""><div id="airTxt"><div id="airline">&nbsp;</div><div id="flight">&mdash;</div></div>
-              <div id="tags"><span id="distPill"></span><span id="tracked"></span></div></div>
+              <div id="tags"><span id="distPill"></span><span id="tracked"></span><span id="pIdx"></span></div></div>
             <div id="route">
               <div class="ap"><div class="code" id="oCode">---</div><div class="city" id="oCity">&nbsp;</div></div>
               <div id="track"><div id="trackLine"><div id="trackFill"></div>
@@ -324,7 +325,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
       <label class="chk"><input id="fChime" type="checkbox">Chime on &ldquo;LOOK UP!&rdquo;</label>
     </div>
     <div style="grid-column:1/-1"><label class="chk" style="margin-top:0"><input id="fRot" type="checkbox">Rotate screens automatically (tap a dot at the bottom to jump; tapping the screen pauses for 60 s)</label>
-      <div style="display:flex;gap:2vh;margin-top:.8vh;flex-wrap:wrap"><label style="flex:1">Closest plane (seconds, 0 = hide)<input id="fRotP" type="number" min="0" max="300"></label><label style="flex:1">Radar<input id="fRotR" type="number" min="0" max="300"></label><label style="flex:1">Stats<input id="fRotS" type="number" min="0" max="300"></label><label style="flex:1">Weather (Open-Meteo)<input id="fRotW" type="number" min="0" max="300"></label></div>
+      <div style="display:flex;gap:2vh;margin-top:.8vh;flex-wrap:wrap"><label style="flex:1">Aircraft (seconds, 0 = hide)<input id="fRotP" type="number" min="0" max="300"></label><label style="flex:1">Planes per visit (1 = closest only)<input id="fPpv" type="number" min="1" max="5"></label><label style="flex:1">Radar<input id="fRotR" type="number" min="0" max="300"></label><label style="flex:1">Stats<input id="fRotS" type="number" min="0" max="300"></label><label style="flex:1">Weather (Open-Meteo)<input id="fRotW" type="number" min="0" max="300"></label></div>
       <label class="chk"><input id="fPh" type="checkbox">Aircraft photos from planespotters.net (falls back to the silhouette)</label><div id="phStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
     <div>
       <label class="chk"><input id="fDim" type="checkbox">Dim screen at night</label>
@@ -343,10 +344,10 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.28.1206';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.1210';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
-var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true};
+var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true,perVisit:3};
 function loadSettings(){
   var s={},k;for(k in DEFAULTS)s[k]=DEFAULTS[k];
   try{var raw=localStorage.getItem('overhead.settings');if(raw){var o=JSON.parse(raw);for(k in o)if(k in s)s[k]=o[k];}}catch(e){}
@@ -1219,7 +1220,9 @@ function renderPanel(){
     selectedHex=(air[0]||arr[0]||{}).hex||null;
   }
   rotTick(now);
-  var on=SCR[cur]?SCR[cur].id:'';
+  var on=SCR[cur]?SCR[cur].id:'',vis=null;
+  if(on==='plane'&&!(now<manualUntil&&selectedHex&&planes[selectedHex])&&S.perVisit>1){vis=visitPlane(arr,now);if(vis)selectedHex=vis.hex;}
+  $('pIdx').innerHTML=vis&&vis.n>1?new Array(vis.n+1).join('<i></i>').replace(/<i><\/i>/g,function(m,o){return o/7===vis.i?'<i class="on"></i>':m;}):'';
   if(on==='radar'&&!S.anim)drawRadar(arr,now);
   var plc=S.name||(wxPlace()!=='Your location'?wxPlace():'Overhead');if($('place').textContent!==plc)$('place').textContent=plc;
   $('count').textContent=arr.length?arr.length+(arr.length===1?' plane':' planes'):'';
@@ -1352,11 +1355,28 @@ function trend(id,key){
 }
 
 /* ---------------- rotating screens ---------------- */
-var SCR=[{id:'plane',el:'scrPlane',name:'CLOSEST PLANE',title:'Closest plane',key:'rotPlane'},
+var SCR=[{id:'plane',el:'scrPlane',name:'CLOSEST PLANE',title:'Aircraft',key:'rotPlane'},
          {id:'radar',el:'scrRadar',name:'RADAR',title:'Radar',key:'rotRadar'},
          {id:'stats',el:'scrStats',name:'STATS',title:'Stats',key:'rotStats'},
          {id:'wx',el:'scrWx',name:'WEATHER',title:'Weather',key:'rotWx'}];
-var cur=-1,scrStart=0;
+var cur=-1,scrStart=0,visitSeq=0;
+/* Aircraft screen: each visit shows up to S.perVisit random planes in range (airborne first),
+   sharing the screen's time (12 s / 3 planes = 4 s each). Planes shown last visit go to the back. */
+var visit={seq:-1,start:0,set:[],last:[]};
+function visitPlane(arr,now){
+  var dur=Math.max(3,S.rotPlane||12)*1000;
+  if(visit.seq!==visitSeq||!visit.set.length||now-visit.start>=dur){
+    var air=arr.filter(function(p){return !p.ground;}),pool=(air.length?air:arr).map(function(p){return p.hex;});
+    for(var i=pool.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=pool[i];pool[i]=pool[j];pool[j]=t;}
+    var last=visit.set;pool.sort(function(a,b){return (last.indexOf(a)>=0)-(last.indexOf(b)>=0);});
+    visit={seq:visitSeq,start:now,set:pool.slice(0,Math.min(S.perVisit,pool.length)),last:last};
+  }
+  var n=visit.set.length;if(!n)return null;
+  var idx=Math.min(n-1,Math.floor((now-visit.start)/(dur/n)));
+  for(var k=0;k<n;k++){var h=visit.set[(idx+k)%n];if(planes[h]&&arr.some(function(x){return x.hex===h;}))return {hex:h,i:(idx+k)%n,n:n};}
+  return null;
+}
+function scrTitle(i){return SCR[i].id==='plane'?(S.perVisit>1?'AIRCRAFT NEARBY':'CLOSEST PLANE'):SCR[i].name;}
 function scrOk(i){
   var s=SCR[i];if(!s||!(S[s.key]>0))return false;
   if(s.id==='plane')return !!(selectedHex&&planes[selectedHex]);
@@ -1376,7 +1396,7 @@ function showScreen(i,manual,quiet){
   if(i!==cur){
     cur=i;scrStart=Date.now();
     SCR.forEach(function(s,k){$(s.el).classList.toggle('on',k===i);});
-    $('scrName').textContent=SCR[i].name;
+    $('scrName').textContent=scrTitle(i);if(SCR[i].id==='plane')visitSeq++;
     var bar=$('rotBar');bar.style.transition='none';bar.style.width='0';void bar.offsetWidth;bar.style.transition='';
     if(SCR[i].id==='wx')renderWx();
   }
@@ -1795,7 +1815,7 @@ $('ver').textContent='v'+APP_VERSION+(LOADER_BASE?' (via loader)':'');
 function openSettings(){
   $('fName').value=S.name||'';$('fLat').value=S.lat==null?'':S.lat;$('fLon').value=S.lon==null?'':S.lon;
   $('fRad').value=S.radius;$('fRef').value=S.refresh;$('fSrc').value=S.source;$('fCustom').value=S.custom||'';$('fGround').checked=!!S.ground;
-  $('fAlert').value=S.alertMi;$('fRot').checked=!!S.rotate;$('fRotP').value=S.rotPlane;$('fRotR').value=S.rotRadar;$('fRotS').value=S.rotStats;$('fRotW').value=S.rotWx;$('fPh').checked=!!S.photos;$('phStat').textContent=photoStatus();$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
+  $('fAlert').value=S.alertMi;$('fRot').checked=!!S.rotate;$('fRotP').value=S.rotPlane;$('fRotR').value=S.rotRadar;$('fRotS').value=S.rotStats;$('fRotW').value=S.rotWx;$('fPpv').value=S.perVisit;$('fPh').checked=!!S.photos;$('phStat').textContent=photoStatus();$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
   $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;$('fAlB').checked=!!S.alBulk;$('fAlBD').value=S.alBulkDay;
   var su=svcU('airlabs');$('alSnapStat').textContent=S.alKey&&S.alBulk?('Snapshots today '+(su.bn||0)+' / '+S.alBulkDay+(ALSNAP?' \u00b7 last at '+new Date(ALSNAP.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+', '+ALSNAP.n+' flights with routes':' \u00b7 none yet')):'';
   svcUsable(SVC_BY.airlabs);svcUsable(SVC_BY.adb);$('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
@@ -1828,7 +1848,7 @@ $('bSave').onclick=function(){
   S.rotate=$('fRot').checked;S.photos=$('fPh').checked;
   for(var hx in PH)if(PH[hx].err)delete PH[hx];phPauseUntil=0;phFail=0;
   function secs(id,d){var v=parseInt($(id).value,10);return isNaN(v)?d:Math.max(0,Math.min(300,v));}
-  var oldWx=S.rotWx;S.rotPlane=secs('fRotP',12);S.rotRadar=secs('fRotR',12);S.rotStats=secs('fRotS',10);S.rotWx=secs('fRotW',10);
+  var oldWx=S.rotWx;S.rotPlane=secs('fRotP',12);S.rotRadar=secs('fRotR',12);S.rotStats=secs('fRotS',10);S.rotWx=secs('fRotW',10);S.perVisit=Math.max(1,Math.min(5,parseInt($('fPpv').value,10)||3));
   if(S.rotWx>0&&!oldWx)WX=null;
   var ak=$('fAdb').value.trim();if(ak!==S.adbKey){S.adbKey=ak;svcPause(SVC_BY.adb,0,'');SVR.adb={};saveSvcR();}
   var lk=$('fAl').value.trim();if(lk!==S.alKey){S.alKey=lk;svcPause(SVC_BY.airlabs,0,'');SVR.airlabs={};saveSvcR();}

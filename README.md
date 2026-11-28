@@ -29,7 +29,8 @@ starts, so restart Fully Kiosk (or reboot) after pushing. Supported keys include
 `adbKey`, `adbDay`, `adbMonth`, plus any other setting (`lat`, `lon`, `name`, `radius`, ...).
 
 ## Screens
-The display rotates through four screens: **Closest plane** (12 s) -> **Radar** (12 s) -> **Stats** (10 s) -> **Weather** (10 s).
+The display rotates through four screens: **Aircraft** (12 s; up to 3 random planes in range, ~4 s each - set
+"Planes per visit" to 1 for just the closest) -> **Radar** (12 s) -> **Stats** (10 s) -> **Weather** (10 s).
 Swipe left/right or tap a dot at the bottom to change screens; that (or tapping the screen) pauses the rotation for 30 seconds,
 and **▶ Resume** at the bottom right restarts it right away. Tapping a plane on the radar or in its list opens it on the Closest plane screen. Times (0 = hide a screen), rotation and photos are in Settings.
 Closest plane is skipped when nothing is in range, Weather until it has loaded. "LOOK UP!" still takes over the screen.
