@@ -79,6 +79,17 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 #phImg{width:100%;height:100%;object-fit:cover;display:block}
 #phCap{font-size:2.4vh;color:#c4ccd6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:2.9vh}
 #stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2vh}
+.ic{display:inline-block;flex:0 0 auto}.ic svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ic svg .f{fill:currentColor;stroke:none}
+.st{display:flex;align-items:center;gap:1.8vh}.st .ic{width:5.2vh;height:5.2vh;color:var(--brand);filter:drop-shadow(0 0 .8vh rgba(var(--brandRGB),.6));transition:transform 1s}.st .tx{min-width:0;flex:1}
+.tile .k,.drow .k,.wb.kv .k{display:flex;align-items:center;gap:1vh}
+.tile .k .ic{width:3.4vh;height:3.4vh;color:#3ee6aa}
+.badge{margin-left:auto;font-size:2.3vh;font-weight:700;letter-spacing:0;padding:.3vh 1.2vh;border-radius:1vh;white-space:nowrap}
+.badge.up{background:rgba(54,211,153,.16);color:var(--ok)}.badge.dn{background:rgba(255,138,93,.16);color:#ff8a5d}.badge.eq{display:none}
+.spark{width:24vh;height:7vh;flex:0 0 auto;display:block}
+.tile .vs{min-width:0}.tile .vs .s{text-align:left;margin-top:.6vh}
+.drow>.ic{width:6.4vh;height:6.4vh;color:#f6a24a}
+.wb.kv{display:flex;align-items:center;gap:2vh}.wb.kv>.ic{width:5.6vh;height:5.6vh;color:#9fb0c3}.wb.kv .tx{min-width:0}
 .st{background:rgba(255,255,255,.06);border-radius:2.4vh;padding:1.7vh 2.4vh;min-width:0}
 .st.w2{grid-column:span 2}
 .st .k{font-size:2.2vh;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
@@ -141,7 +152,11 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 #wxFc{flex:1;min-height:0;display:flex;flex-direction:column;gap:.6vh;padding:1.6vh 2.8vh}
 #wxFcHead{display:flex;justify-content:space-between;font-size:2.2vh;letter-spacing:.12em;color:var(--dim)}
 #wxSpot.ok{color:var(--ok)}#wxSpot.fair{color:#f6c84a}#wxSpot.bad{color:#ff8a5d}
-#wxHours{flex:1;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));text-align:center;align-items:center}
+#wxHours,#wxWind8,#wxPrec8{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));text-align:center;align-items:center}
+#wxChart{flex:1;min-height:12vh;position:relative}#wxChart svg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible}
+#wxWind8 div,#wxPrec8 div{font-size:2.3vh;color:var(--dim);display:flex;align-items:center;justify-content:center;gap:.6vh;white-space:nowrap}
+#wxWind8 .ic{width:2.8vh;height:2.8vh;color:#9fb0c3}#wxPrec8 .ic{width:2.4vh;height:2.4vh;color:#5aa9ff}
+#wxPrec8 div.wet{color:#8fc3ff}
 .hr .t{font-size:2.5vh;color:var(--dim)}.hr svg{width:4.8vh;height:4.8vh;display:block;margin:.6vh auto}
 .hr .v{font-size:4.2vh;font-weight:600}.hr .w{font-size:2.3vh;color:var(--dim)}
 /* LOOK UP alert */
@@ -203,13 +218,13 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
           <div id="photo"><div id="phBox"><div id="cardShape"></div><a id="phLink" target="_blank" rel="noopener"><img id="phImg" alt="Photo of this aircraft"></a></div><div id="phCap"></div></div>
         </div>
         <div id="stats">
-          <div class="st"><div class="k">Altitude</div><div class="v" id="sAlt">&ndash;</div></div>
-          <div class="st"><div class="k">Speed</div><div class="v" id="sSpd">&ndash;</div></div>
-          <div class="st"><div class="k">Heading</div><div class="v" id="sHdg">&ndash;</div></div>
-          <div class="st"><div class="k">Vertical</div><div class="v" id="sVr">&ndash;</div></div>
-          <div class="st w2"><div class="k">Aircraft</div><div class="v" id="sType">&ndash;</div></div>
-          <div class="st"><div class="k">Reg</div><div class="v" id="sReg">&ndash;</div></div>
-          <div class="st"><div class="k">Squawk</div><div class="v" id="sSq">&ndash;</div></div>
+          <div class="st"><span class="ic" data-ic="alt"></span><div class="tx"><div class="k">Altitude</div><div class="v" id="sAlt">&ndash;</div></div></div>
+          <div class="st"><span class="ic" data-ic="spd"></span><div class="tx"><div class="k">Speed</div><div class="v" id="sSpd">&ndash;</div></div></div>
+          <div class="st"><span class="ic" data-ic="arrow" id="icHdg"></span><div class="tx"><div class="k">Heading</div><div class="v" id="sHdg">&ndash;</div></div></div>
+          <div class="st"><span class="ic" data-ic="vup" id="icVr"></span><div class="tx"><div class="k">Vertical</div><div class="v" id="sVr">&ndash;</div></div></div>
+          <div class="st w2"><span class="ic" data-ic="plane"></span><div class="tx"><div class="k">Aircraft</div><div class="v" id="sType">&ndash;</div></div></div>
+          <div class="st"><span class="ic" data-ic="tag"></span><div class="tx"><div class="k">Reg</div><div class="v" id="sReg">&ndash;</div></div></div>
+          <div class="st"><span class="ic" data-ic="radio"></span><div class="tx"><div class="k">Squawk</div><div class="v" id="sSq">&ndash;</div></div></div>
         </div>
       </div></div>
     </section>
@@ -222,18 +237,18 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
     <section class="scr" id="scrStats">
       <div class="col" id="nowCol"><div class="h2">NOW <span id="nowSub"></span></div>
         <div id="nowGrid">
-          <div class="tile"><div class="k">AIRCRAFT NEARBY</div><div class="b"><span class="v" id="nN"></span><span class="s" id="nNs"></span></div></div>
-          <div class="tile"><div class="k">AIRLINES NEARBY</div><div class="b"><span class="v" id="nA"></span><span class="s" id="nAs"></span></div></div>
-          <div class="tile"><div class="k">NEAREST</div><div class="b"><span class="v" id="nNe"></span><span class="s" id="nNes"></span></div></div>
-          <div class="tile"><div class="k">HIGHEST</div><div class="b"><span class="v" id="nH"></span><span class="s" id="nHs"></span></div></div>
-          <div class="tile"><div class="k">FASTEST</div><div class="b"><span class="v" id="nF"></span><span class="s" id="nFs"></span></div></div>
-          <div class="tile"><div class="k">CLOSEST TODAY</div><div class="b"><span class="v" id="nC"></span><span class="s" id="nCs"></span></div></div>
+          <div class="tile"><div class="k"><span class="ic" data-ic="plane"></span>AIRCRAFT NEARBY<span class="badge eq" id="nNb"></span></div><div class="b"><div class="vs"><span class="v" id="nN"></span><div class="s" id="nNs"></div></div><svg class="spark" id="nNg" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"></svg></div></div>
+          <div class="tile"><div class="k"><span class="ic" data-ic="tail"></span>AIRLINES NEARBY<span class="badge eq" id="nAb"></span></div><div class="b"><div class="vs"><span class="v" id="nA"></span><div class="s" id="nAs"></div></div><svg class="spark" id="nAg" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true"></svg></div></div>
+          <div class="tile"><div class="k"><span class="ic" data-ic="pin"></span>NEAREST</div><div class="b"><span class="v" id="nNe"></span><span class="s" id="nNes"></span></div></div>
+          <div class="tile"><div class="k"><span class="ic" data-ic="alt"></span>HIGHEST</div><div class="b"><span class="v" id="nH"></span><span class="s" id="nHs"></span></div></div>
+          <div class="tile"><div class="k"><span class="ic" data-ic="spd"></span>FASTEST</div><div class="b"><span class="v" id="nF"></span><span class="s" id="nFs"></span></div></div>
+          <div class="tile"><div class="k"><span class="ic" data-ic="target"></span>CLOSEST TODAY</div><div class="b"><span class="v" id="nC"></span><span class="s" id="nCs"></span></div></div>
         </div></div>
       <div class="col" id="dayCol"><div class="h2" style="color:#f6a24a">TODAY <span>&middot; since midnight</span></div>
-        <div class="drow"><div class="t"><div class="k">AIRCRAFT SEEN</div><div class="v" id="dSeen" style="font-size:7vh;font-weight:700"></div></div><div id="bars"></div></div>
-        <div class="drow"><div class="t"><div class="k">TOP AIRLINE</div><div class="v" id="dAir"></div></div><span class="s" id="dAirN"></span></div>
-        <div class="drow"><div class="t"><div class="k">TOP AIRCRAFT TYPE</div><div class="v" id="dTy"></div></div><span class="s" id="dTyN"></span></div>
-        <div class="drow"><div class="t"><div class="k">TOP DESTINATION</div><div class="v" id="dDe"></div></div><span class="s" id="dDeN"></span></div>
+        <div class="drow"><span class="ic" data-ic="cal"></span><div class="t"><div class="k">AIRCRAFT SEEN</div><div class="v" id="dSeen" style="font-size:7vh;font-weight:700"></div></div><div id="bars"></div></div>
+        <div class="drow"><span class="ic" data-ic="medal"></span><div class="t"><div class="k">TOP AIRLINE</div><div class="v" id="dAir"></div></div><span class="s" id="dAirN"></span></div>
+        <div class="drow"><span class="ic" data-ic="plane"></span><div class="t"><div class="k">TOP AIRCRAFT TYPE</div><div class="v" id="dTy"></div></div><span class="s" id="dTyN"></span></div>
+        <div class="drow"><span class="ic" data-ic="tower"></span><div class="t"><div class="k">TOP DESTINATION</div><div class="v" id="dDe"></div></div><span class="s" id="dDeN"></span></div>
       </div>
     </section>
 
@@ -254,12 +269,12 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
         </div>
       </div>
       <div id="wxMid">
-        <div class="wb kv"><div class="k">RAIN NEXT HOUR</div><div class="v" id="wxRain"></div></div>
-        <div class="wb kv"><div class="k">CLOUD COVER</div><div class="v" id="wxCloud"></div></div>
-        <div class="wb kv"><div class="k">TODAY LOW / HIGH</div><div class="v" id="wxLH"></div></div>
-        <div class="wb kv"><div class="k">SUNRISE / SUNSET</div><div class="v" id="wxSun"></div></div>
+        <div class="wb kv"><span class="ic" data-ic="rain"></span><div class="tx"><div class="k">RAIN NEXT HOUR</div><div class="v" id="wxRain"></div></div></div>
+        <div class="wb kv"><span class="ic" data-ic="cloud"></span><div class="tx"><div class="k">CLOUD COVER</div><div class="v" id="wxCloud"></div></div></div>
+        <div class="wb kv"><span class="ic" data-ic="therm"></span><div class="tx"><div class="k">TODAY LOW / HIGH</div><div class="v" id="wxLH"></div></div></div>
+        <div class="wb kv"><span class="ic" data-ic="sunrise"></span><div class="tx"><div class="k">SUNRISE / SUNSET</div><div class="v" id="wxSun"></div></div></div>
       </div>
-      <div class="wb" id="wxFc"><div id="wxFcHead"><span>NEXT 24 HOURS &middot; 3-HOUR STEPS</span><span id="wxSpot"></span></div><div id="wxHours"></div></div>
+      <div class="wb" id="wxFc"><div id="wxFcHead"><span>NEXT 24 HOURS &middot; 3-HOUR STEPS</span><span id="wxSpot"></span></div><div id="wxHours"></div><div id="wxChart"><svg id="wxSvg" aria-hidden="true"></svg></div><div id="wxWind8"></div><div id="wxPrec8"></div></div>
     </section>
   </div>
   <div id="foot"><span id="stTxt">Starting&hellip;</span><div id="dots"></div><span id="nextTxt"></span><button type="button" id="resume">&#9654; Resume</button></div>
@@ -326,7 +341,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.28.0021';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.0034';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true};
@@ -1238,6 +1253,8 @@ function renderPanel(){
     $('sAlt').innerHTML=p.ground?'On ground':(p.alt==null?'–':fmtInt(p.alt)+' ft'+vr);
     $('sSpd').textContent=p.gs==null?'–':fmtInt(p.gs*1.15078)+' mph';
     $('sHdg').textContent=p.trk==null?'–':compass(p.trk)+' '+Math.round(p.trk)+'°';
+    $('icHdg').style.transform='rotate('+Math.round(p.trk||0)+'deg)';
+    var vic=p.ground||Math.abs(p.vr||0)<200?'vlv':(p.vr>0?'vup':'vdn');if($('icVr').getAttribute('data-ic')!==vic){$('icVr').setAttribute('data-ic',vic);$('icVr').innerHTML=icon(vic);}
     var sv=$('sVr');
     if(p.ground){sv.textContent='–';sv.className='v';}
     else if(Math.abs(p.vr||0)<200){sv.textContent='Level';sv.className='v';}
@@ -1280,6 +1297,56 @@ function renderPanel(){
 }
 $('list').addEventListener('click',function(e){var r=e.target.closest('.row');if(r){selectedHex=r.getAttribute('data-hex');showScreen(0,true);}});
 function clockTxt(t){var d=new Date(t),h=d.getHours(),m=d.getMinutes();return ((h%12)||12)+':'+(m<10?'0':'')+m+(h<12?' AM':' PM');}
+
+/* ---------------- line icons ---------------- */
+var ICO={
+  alt:'<path d="M2 20l7-12 4 6 3-4 6 10z"/>',
+  spd:'<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4.5-5"/><circle cx="12" cy="17" r="1.3" class="f"/>',
+  arrow:'<path d="M12 3l5.5 17-5.5-4-5.5 4z" class="f"/>',
+  vup:'<path d="M12 20V5M6 11l6-6 6 6"/>',vdn:'<path d="M12 4v15M6 13l6 6 6-6"/>',vlv:'<path d="M3 12h17M14 6l6 6-6 6"/>',
+  plane:'<path class="f" d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>',
+  tag:'<path d="M3 12.5V4h8.5L21 13.5 13.5 21z"/><circle cx="7.5" cy="8" r="1.4"/>',
+  radio:'<circle cx="12" cy="12" r="1.6" class="f"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>',
+  tail:'<path d="M4 20h16l-7.5-16H8l2 9H5.5z"/>',
+  pin:'<path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.3" class="f"/>',
+  cal:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M7.5 14h2M11 14h2M14.5 14h2M7.5 17h2M11 17h2"/>',
+  medal:'<circle cx="12" cy="14.5" r="5.5"/><path d="M8.6 10.2L6 3h4l2 4.2L14 3h4l-2.6 7.2"/><path d="M12 12.2l.8 1.6 1.7.2-1.2 1.2.3 1.7-1.6-.8-1.6.8.3-1.7-1.2-1.2 1.7-.2z" class="f"/>',
+  tower:'<path d="M9.5 21l1-9.5h3l1 9.5M6.5 7h11l-2.2 4.5H8.7zM12 3v4M7 21h10"/>',
+  rain:'<path d="M7 15h10.5a4.2 4.2 0 0 0 .4-8.4A6 6 0 0 0 5.8 6.9 4.1 4.1 0 0 0 7 15z"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/>',
+  cloud:'<path d="M7 19h10.5a4.5 4.5 0 0 0 .4-9A6.5 6.5 0 0 0 5.6 9.6 4.8 4.8 0 0 0 7 19z"/>',
+  therm:'<path d="M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9v8"/>',
+  sunrise:'<path d="M3 19h18M6.5 19a5.5 5.5 0 0 1 11 0M12 5v4M9.5 7.5L12 5l2.5 2.5M4.6 11.6l1.4 1.4M19.4 11.6L18 13"/>',
+  drop:'<path d="M12 3s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z"/>',
+  wind:'<path d="M12 3l5 17-5-4-5 4z" class="f"/>'};
+function icon(n){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(ICO[n]||'')+'</svg>';}
+(function(){var el=document.querySelectorAll('[data-ic]');for(var i=0;i<el.length;i++)el[i].innerHTML=icon(el[i].getAttribute('data-ic'));})();
+
+/* ---------------- last-hour history for the sparklines (one sample a minute) ---------------- */
+var HIST=[];try{HIST=JSON.parse(localStorage.getItem('overhead.hist')||'[]')||[];}catch(e){HIST=[];}
+function histSample(now){
+  if(DEMO)return;
+  var arr=currentList(now),air=arr.filter(function(p){return !p.ground;}),names={},n=0;
+  air.forEach(function(p){var a=airlineInfo(p,null).name;if(a&&!names[a]){names[a]=1;n++;}});
+  var last=HIST[HIST.length-1];
+  if(last&&now-last.t<55e3){last.n=arr.length;last.a=n;}else HIST.push({t:now,n:arr.length,a:n});
+  while(HIST.length&&now-HIST[0].t>60*60e3)HIST.shift();
+  try{localStorage.setItem('overhead.hist',JSON.stringify(HIST));}catch(e){}
+}
+function sparkSvg(id,key){
+  var pts=HIST.map(function(h){return h[key];}),el=$(id);
+  if(pts.length<2){el.innerHTML='';return;}
+  var mx=Math.max.apply(null,pts),mn=Math.min.apply(null,pts),rg=Math.max(1,mx-mn),n=pts.length;
+  var xy=pts.map(function(v,i){return [(i/(n-1)*100).toFixed(1),(27-(v-mn)/rg*22).toFixed(1)];});
+  var line=xy.map(function(p,i){return (i?'L':'M')+p[0]+' '+p[1];}).join(' ');
+  el.innerHTML='<path d="'+line+' L100 30 L0 30 Z" fill="rgba(62,230,170,.16)"/><path d="'+line+'" fill="none" stroke="#3ee6aa" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+}
+function trend(id,key){
+  var el=$(id),now=Date.now(),old=null,cur2=HIST[HIST.length-1];
+  for(var i=0;i<HIST.length;i++)if(now-HIST[i].t<=10*60e3){old=HIST[i];break;}
+  var d=cur2&&old&&old!==cur2?cur2[key]-old[key]:0;
+  el.className='badge '+(d>0?'up':(d<0?'dn':'eq'));el.textContent=d>0?'\u2191 +'+d:(d<0?'\u2193 \u2212'+(-d):'');
+}
 
 /* ---------------- rotating screens ---------------- */
 var SCR=[{id:'plane',el:'scrPlane',name:'CLOSEST PLANE',title:'Closest plane',key:'rotPlane'},
@@ -1461,9 +1528,9 @@ function setT(id,v,sub){$(id).textContent=v;$(id+'s').innerHTML=sub||'';}
 function renderStats(arr,now){
   var air=arr.filter(function(p){return !p.ground;}),T=today(),i;
   $('nowSub').textContent='· within '+S.radius+' mi';
-  setT('nN',arr.length,arr.length-air.length?(arr.length-air.length)+' on ground':(air.length?'all airborne':''));
+  setT('nN',arr.length,arr.length-air.length?(arr.length-air.length)+' on ground':(air.length?'all airborne':''));sparkSvg('nNg','n');trend('nNb','n');
   var names={},nl=[];air.forEach(function(p){var n=airlineInfo(p,null).name;if(n&&!names[n]){names[n]=1;nl.push(n);}});
-  setT('nA',nl.length,esc(nl.slice(0,2).join(' · ')));
+  setT('nA',nl.length,esc(nl.slice(0,2).join(' · ')));sparkSvg('nAg','a');trend('nAb','a');
   function who(p){return esc(p.cs||p.reg||p.hex.toUpperCase())+'<br>'+esc(p.type||'');}
   if(air.length){
     var ne=air[0],hi=air[0],fa=air[0];
@@ -1486,13 +1553,13 @@ function renderStats(arr,now){
 
 /* ---------------- weather (Open-Meteo, free, no key; once every 30 min) ---------------- */
 var WX=null;
-try{var wc=JSON.parse(localStorage.getItem('overhead.wx')||'null');if(wc&&Date.now()-wc.t<3*3600e3)WX=wc;}catch(e){}
+try{var wc=JSON.parse(localStorage.getItem('overhead.wx')||'null');if(wc&&Date.now()-wc.t<3*3600e3&&wc.j&&wc.j.hourly&&wc.j.hourly.wind_direction_10m)WX=wc;}catch(e){}
 function wxFetch(){
   if(S.lat==null||!(S.rotWx>0))return;
   var u='https://api.open-meteo.com/v1/forecast?latitude='+(+S.lat).toFixed(3)+'&longitude='+(+S.lon).toFixed(3)+
     '&current=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,is_day,weather_code,cloud_cover,pressure_msl,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m'+
-    '&hourly=temperature_2m,weather_code,is_day,wind_speed_10m,precipitation_probability&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset'+
-    '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=2';
+    '&hourly=temperature_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,precipitation,precipitation_probability&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset'+
+    '&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=2';
   fetchJSON(u,12000).then(function(j){
     if(!j||!j.current)return;
     WX={t:Date.now(),lat:S.lat,lon:S.lon,j:j};try{localStorage.setItem('overhead.wx',JSON.stringify(WX));}catch(e){}
@@ -1566,14 +1633,38 @@ function renderWx(){
   if(cc<=30&&vis>=8){sp.className='ok';sp.textContent='GREAT SPOTTING: '+(cc<=10?'CLEAR':cc+'% CLOUD')+', '+Math.round(vis)+' MI VIS';}
   else if(cc<=70&&vis>=4){sp.className='fair';sp.textContent='FAIR SPOTTING: '+cc+'% CLOUD, '+Math.round(vis)+' MI VIS';}
   else{sp.className='bad';sp.textContent='POOR SPOTTING: '+(vis<4?Math.round(vis*10)/10+' MI VIS':cc+'% CLOUD');}
-  var out='';
-  for(var k=0;k<8;k++){
+  var out='',wind='',prec='',temps=[],k;
+  for(k=0;k<8;k++){
     var x=hi+1+k*3;if(x>=tm.length)break;
     var hr=+tm[x].slice(11,13),inf=wxInfo(h.weather_code[x],h.is_day[x]);
-    out+='<div class="hr"><div class="t">'+(((hr%12)||12)+(hr<12?' AM':' PM'))+'</div>'+WXI[inf[1]]+'<div class="v">'+Math.round(h.temperature_2m[x])+'°</div><div class="w">'+Math.round(h.wind_speed_10m[x])+' mph</div></div>';
+    out+='<div class="hr"><div class="t">'+(((hr%12)||12)+(hr<12?' AM':' PM'))+'</div>'+WXI[inf[1]]+'</div>';
+    temps.push(h.temperature_2m[x]);
+    var wd=h.wind_direction_10m?h.wind_direction_10m[x]:null;
+    wind+='<div>'+(wd==null?'':'<span class="ic" style="transform:rotate('+Math.round((wd+180)%360)+'deg)">'+icon('wind')+'</span>')+Math.round(h.wind_speed_10m[x])+' mph</div>';
+    var pr=h.precipitation?h.precipitation[x]:null,pp2=h.precipitation_probability?h.precipitation_probability[x]:null;
+    prec+='<div class="'+(pr>0?'wet':'')+'"><span class="ic">'+icon('drop')+'</span>'+(pr==null?'–':(pr>0?pr.toFixed(2)+' in':'0 in'))+(pp2>=20?' · '+Math.round(pp2)+'%':'')+'</div>';
   }
-  $('wxHours').innerHTML=out;
+  $('wxHours').innerHTML=out;$('wxWind8').innerHTML=wind;$('wxPrec8').innerHTML=prec;
+  drawTempChart(temps);
 }
+function drawTempChart(temps){
+  var svg=$('wxSvg'),box=$('wxChart'),W=box.clientWidth,H=box.clientHeight,vh=window.innerHeight/100;
+  if(!W||!H||temps.length<2){svg.innerHTML='';return;}
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  var mn=Math.min.apply(null,temps),mx=Math.max.apply(null,temps),rg=Math.max(4,mx-mn),n=8,top=5.2*vh,bot=1.4*vh;
+  var pts=temps.map(function(t,i){return [(i+0.5)*W/n,top+(1-(t-mn)/rg)*(H-top-bot)];});
+  var line=pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' ');
+  var g='<defs><linearGradient id="wxFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ee6aa" stop-opacity=".28"/><stop offset="1" stop-color="#3ee6aa" stop-opacity="0"/></linearGradient></defs>';
+  for(var i=1;i<=3;i++){var gy=(top+(H-top-bot)*i/3).toFixed(1);g+='<line x1="0" x2="'+W+'" y1="'+gy+'" y2="'+gy+'" stroke="rgba(255,255,255,.06)" stroke-dasharray="4 6"/>';}
+  g+='<path d="'+line+' L'+pts[pts.length-1][0].toFixed(1)+' '+H+' L'+pts[0][0].toFixed(1)+' '+H+' Z" fill="url(#wxFill)"/>';
+  g+='<path d="'+line+'" fill="none" stroke="#3ee6aa" stroke-width="'+(0.5*vh).toFixed(1)+'" stroke-linejoin="round" stroke-linecap="round"/>';
+  pts.forEach(function(p,i){
+    g+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="'+(0.9*vh).toFixed(1)+'" fill="#0d131c" stroke="#3ee6aa" stroke-width="'+(0.45*vh).toFixed(1)+'"/>';
+    g+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-1.8*vh).toFixed(1)+'" text-anchor="middle" font-family="Roboto,Arial" font-weight="600" font-size="'+(4*vh).toFixed(1)+'" fill="#eef3f8">'+Math.round(temps[i])+'°</text>';
+  });
+  svg.innerHTML=g;
+}
+
 
 /* ---------------- LOOK UP! alert ---------------- */
 function checkAlert(arr,now){
@@ -1640,7 +1731,7 @@ var pollTimer=null,failCount=0;
 function poll(){
   clearTimeout(pollTimer);
   (DEMO?demoFetch():fetchAircraft()).then(function(list){
-    ingest(list);lastOK=Date.now();lastErr='';failCount=0;tally(lastOK);renderPanel();alBulkCheck();
+    ingest(list);lastOK=Date.now();lastErr='';failCount=0;tally(lastOK);histSample(lastOK);renderPanel();alBulkCheck();
   },function(e){
     failCount++;srcName='';lastErr=(e&&e.message?e.message:'Can’t reach flight data')+' – retrying…';
     if(S.source==='auto')providerIdx=(providerIdx+1)%PROVIDERS.length;
