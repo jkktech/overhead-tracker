@@ -13,62 +13,134 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 #stars{position:fixed;inset:0;z-index:0;transition:opacity 4s;pointer-events:none}
 .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:tw 3s ease-in-out infinite}
 @keyframes tw{50%{opacity:.15}}
-#app{position:relative;z-index:1;display:flex;height:100vh;width:100vw;transition:filter 3s}
-#radarWrap{flex:0 0 auto;height:100vh;width:100vh;max-width:52vw;position:relative}
-#radar{display:block;width:100%;height:100%}
-#side{flex:1;display:flex;flex-direction:column;padding:2.4vh 2.6vh 1.6vh 1vh;min-width:0}
-#top{display:flex;align-items:center;gap:1.6vh;font-size:3.2vh;color:var(--dim)}
+#app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;width:100vw;padding:1.6vh 2.4vh 1vh;gap:1.2vh;transition:filter 3s}
+/* top bar + footer (shared by every screen) */
+#top{display:flex;align-items:center;gap:2.2vh;height:7vh;flex:0 0 auto;font-size:3.1vh;color:var(--dim)}
+#scrName{font-size:2.7vh;font-weight:700;letter-spacing:.18em;color:#3ee6aa;white-space:nowrap}
 #place{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em}
-#count{background:rgba(255,255,255,.07);border-radius:3vh;padding:.3vh 1.4vh;font-size:2.7vh}
-#clock{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
-#gear{background:none;border:0;color:var(--dim);font-size:4.4vh;line-height:1;padding:0 .4vh;cursor:pointer}
-/* card */
-#card{margin-top:1.6vh;border-radius:2.4vh;padding:2.2vh 2.6vh 2vh 3.4vh;flex:0 0 auto;position:relative;overflow:hidden;
+#count{background:rgba(255,255,255,.07);border-radius:3vh;padding:.4vh 2.2vh;font-size:2.7vh;color:#c4ccd6;white-space:nowrap}
+#clock{color:var(--text);font-weight:500;font-size:3.6vh;font-variant-numeric:tabular-nums;white-space:nowrap}
+#gear{background:none;border:0;color:var(--dim);font-size:4.6vh;line-height:1;padding:0 .4vh;cursor:pointer}
+#foot{display:flex;align-items:center;gap:2vh;height:4.4vh;flex:0 0 auto;font-size:2.4vh;color:var(--dim)}
+#foot.err #stTxt{color:var(--bad)}
+#stTxt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dots{display:flex;align-items:center}
+#dots button{width:7vh;height:4.4vh;background:none;border:0;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#dots button i{display:block;width:1.6vh;height:1.6vh;border-radius:1vh;background:#3a4656;transition:width .3s,background .3s}
+#dots button.on i{width:4.6vh;background:#3ee6aa}
+#dots button.na i{opacity:.35}
+#dots button.off{display:none}
+#nextTxt{flex:1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rotBar{position:fixed;left:0;bottom:0;height:.5vh;width:0;background:#3ee6aa;opacity:.6;z-index:2;transition:width 1s linear}
+/* screens */
+#screens{position:relative;height:83.6vh;flex:0 0 auto}
+.scr{position:absolute;left:0;top:0;right:0;bottom:0;display:flex;opacity:0;visibility:hidden;transition:opacity .6s,visibility 0s .6s}
+.scr.on{opacity:1;visibility:visible;transition:opacity .6s}
+/* 1 - closest plane */
+#scrPlane{flex-direction:column}
+#card{flex:1;border-radius:3.6vh;padding:3vh 3.4vh 2.6vh 4.6vh;position:relative;overflow:hidden;
   background:linear-gradient(125deg,rgba(var(--brandRGB),.30) 0%,rgba(14,19,27,.82) 55%,rgba(10,14,20,.85) 100%);
   border:1px solid rgba(var(--brandRGB),.45);box-shadow:0 0 4vh rgba(var(--brandRGB),.22),inset 0 0 0 1px rgba(255,255,255,.03);
   transition:background 1s,border-color 1s,box-shadow 1s}
 #card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:.9vh;background:var(--brand);box-shadow:0 0 2vh var(--brand);transition:background 1s}
+#card .in{display:flex;flex-direction:column;gap:2.6vh;height:100%}
 #card.swap .in{animation:swapIn .55s ease-out}
 @keyframes swapIn{from{opacity:0;transform:translateY(1.6vh)}to{opacity:1;transform:none}}
-#airRow{display:flex;align-items:center;gap:2vh;min-height:9vh}
-#cardShape{flex:0 0 auto;width:13vh;height:13vh;margin:-2vh -.6vh -2vh 0;transform:rotate(90deg);filter:drop-shadow(0 0 1.6vh rgba(var(--brandRGB),.8))}
-#cardShape svg{width:100%;height:100%;display:block}
-#logo{width:8.5vh;height:8.5vh;border-radius:1.8vh;background:#fff;object-fit:contain;padding:.6vh;display:none;box-shadow:0 0 2.4vh rgba(var(--brandRGB),.5)}
+#cardTop{display:flex;gap:3.6vh}
+#cardMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:3vh}
+#airRow{display:flex;align-items:flex-start;gap:2vh}
+#logo{width:8.5vh;height:8.5vh;border-radius:1.8vh;background:#fff;object-fit:contain;padding:.6vh;display:none;box-shadow:0 0 2.4vh rgba(var(--brandRGB),.5);flex:0 0 auto}
 #airTxt{min-width:0;flex:1}
-#airline{font-size:3vh;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em}
-#flight{font-size:7.6vh;font-weight:800;letter-spacing:.04em;line-height:1.05;color:#fff;text-shadow:0 0 2.6vh rgba(var(--brandRGB),.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#badge{position:absolute;top:2vh;right:16vh;font-size:2.4vh;font-weight:800;letter-spacing:.14em;color:#04110b;background:var(--ok);padding:.5vh 1.2vh;border-radius:1vh;display:none;animation:pulse 1.4s infinite;box-shadow:0 0 2.4vh var(--ok)}
+#airline{font-size:3.5vh;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.03em}
+#flight{font-size:9.6vh;font-weight:800;letter-spacing:.04em;line-height:1.05;color:#fff;text-shadow:0 0 2.6vh rgba(var(--brandRGB),.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tags{display:flex;flex-direction:column;align-items:flex-end;gap:1vh;padding-top:.6vh;flex:0 0 auto}
+#distPill{font-size:2.5vh;font-weight:800;letter-spacing:.12em;color:var(--text);background:rgba(255,255,255,.1);padding:.7vh 1.8vh;border-radius:1.4vh;white-space:nowrap}
+#distPill.oh{color:#04110b;background:var(--ok);box-shadow:0 0 2.4vh var(--ok);animation:pulse 1.4s infinite}
 @keyframes pulse{50%{opacity:.5}}
-/* route */
-#route{display:flex;align-items:flex-start;margin-top:1.6vh;gap:1.8vh}
-.ap{flex:0 0 auto;max-width:30%;min-width:0}
-.ap .code{font-size:6vh;font-weight:800;line-height:1}
-.ap .city{font-size:2.4vh;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.5vh}
+#tracked{font-size:2.6vh;color:var(--dim);white-space:nowrap}
+#route{display:flex;align-items:flex-start;gap:2.6vh}
+.ap{flex:0 0 auto;width:24vh;min-width:0}
+.ap .code{font-size:7.8vh;font-weight:800;line-height:1}
+.ap .city{font-size:2.6vh;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.8vh}
 .ap.r{text-align:right}
-#track{flex:1;min-width:0;padding-top:2.4vh}
-#trackLine{position:relative;height:.6vh;border-radius:1vh;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 1.2vh,transparent 1.2vh 2.2vh)}
+#track{flex:1;min-width:0;padding-top:3.2vh}
+#trackLine{position:relative;height:.9vh;border-radius:1vh;background:repeating-linear-gradient(90deg,rgba(255,255,255,.25) 0 1.8vh,transparent 1.8vh 3.2vh)}
 #trackFill{position:absolute;left:0;top:0;bottom:0;border-radius:1vh;background:linear-gradient(90deg,rgba(var(--brandRGB),.2),var(--brand));box-shadow:0 0 1.6vh var(--brand);transition:width 1.5s}
-#trackPlane{position:absolute;top:50%;width:4.6vh;height:4.6vh;margin:-2.3vh 0 0 -2.3vh;transition:left 1.5s;filter:drop-shadow(0 0 1vh rgba(var(--brandRGB),1))}
-#trackTxt{font-size:2.3vh;color:var(--dim);text-align:center;margin-top:2.2vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#noroute{font-size:3vh;color:var(--dim);margin-top:1.6vh;display:none}
-/* stats */
-#stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4vh 1.6vh;margin-top:1.8vh}
-.st .k{font-size:2vh;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
-.st .v{font-size:3.5vh;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+#trackPlane{position:absolute;top:50%;width:5.6vh;height:5.6vh;margin:-2.8vh 0 0 -2.8vh;transition:left 1.5s;filter:drop-shadow(0 0 1vh rgba(var(--brandRGB),1))}
+#trackTxt{font-size:2.6vh;color:var(--dim);text-align:center;margin-top:3vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#noroute{font-size:3.4vh;color:var(--dim);display:none}
+#photo{flex:0 0 auto;width:62vh;display:flex;flex-direction:column;gap:.8vh}
+#phBox{position:relative;width:62vh;height:35vh;border-radius:2.4vh;overflow:hidden;border:1px solid rgba(var(--brandRGB),.35);
+  background:radial-gradient(circle at 50% 50%,rgba(var(--brandRGB),.22) 0%,rgba(10,14,20,.6) 70%);display:flex;align-items:center;justify-content:center}
+#cardShape{width:28vh;height:28vh;transform:rotate(90deg);filter:drop-shadow(0 0 1.6vh rgba(var(--brandRGB),.8))}
+#cardShape svg{width:100%;height:100%;display:block}
+#phLink{position:absolute;left:0;top:0;right:0;bottom:0;display:none;background:#0a0e14}
+#phImg{width:100%;height:100%;object-fit:cover;display:block}
+#phCap{font-size:2.4vh;color:#c4ccd6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:2.9vh}
+#stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2vh}
+.st{background:rgba(255,255,255,.06);border-radius:2.4vh;padding:1.7vh 2.4vh;min-width:0}
+.st.w2{grid-column:span 2}
+.st .k{font-size:2.2vh;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.st .v{font-size:4.8vh;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .up{color:var(--ok)}.dn{color:#ff8a5d}
-/* list */
-#rsrc{font-size:1.9vh;color:rgba(255,255,255,.38);text-align:right;margin:.9vh 0 -1vh;letter-spacing:.04em;min-height:2.2vh}
-#list{margin-top:1.2vh;flex:1;min-height:0;overflow:hidden}
-.row{display:flex;align-items:center;gap:1.4vh;font-size:2.9vh;padding:.95vh .8vh;border-bottom:1px solid var(--line);cursor:pointer;border-radius:1vh}
-.row .dot{width:1.6vh;height:1.6vh;border-radius:50%;flex:0 0 auto}
-.row .cs{font-weight:700;width:22%}
-.row .ty{flex:1;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .al,.row .di{width:20%;text-align:right;font-variant-numeric:tabular-nums}
-#status{font-size:2.2vh;color:var(--dim);display:flex;justify-content:space-between;padding-top:.6vh}
-#status.err #stTxt{color:var(--bad)}
-#stTxt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:1.4vh}#stSrc{white-space:nowrap}
+/* 2 - radar */
+#scrRadar{gap:3.4vh}
+#radarWrap{flex:0 0 auto;width:83.6vh;height:83.6vh;position:relative}
+#radar{display:block;width:100%;height:100%}
+#rside{flex:1;min-width:0;display:flex;flex-direction:column;gap:1.6vh}
+.hd{font-size:2.4vh;letter-spacing:.16em;color:var(--dim)}
+#list{display:flex;flex-direction:column;gap:1.4vh;min-height:0;overflow:hidden}
+.row{display:flex;align-items:center;gap:2.2vh;padding:1.6vh 2.6vh;border-radius:2.4vh;background:#0d131c;border:1px solid transparent;cursor:pointer}
+.row.sel{background:rgba(var(--brandRGB),.16);border-color:rgba(var(--brandRGB),.45)}
+.row .dot{width:2.2vh;height:2.2vh;border-radius:50%;flex:0 0 auto}
+.row .mid{flex:1;min-width:0}
+.row .cs{font-size:4vh;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ty{font-size:2.6vh;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .rt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.row .di{font-size:3.6vh;font-weight:600}
+.row .al{font-size:2.6vh;color:var(--dim)}
 #empty{display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;flex:1;color:var(--dim);font-size:3.4vh;gap:1vh}
 #empty b{color:var(--text);font-size:4.6vh}
+/* 3 - stats */
+#scrStats{gap:3.6vh}
+.col{display:flex;flex-direction:column;gap:1.6vh;min-width:0}
+#nowCol{flex:1.15}#dayCol{flex:1}
+.h2{font-size:2.9vh;font-weight:800;letter-spacing:.16em;color:#3ee6aa}.h2 span{color:var(--dim);font-weight:400}
+#nowGrid{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:1.6vh}
+.tile{background:#0d131c;border-radius:2.4vh;padding:1.8vh 2.8vh;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.tile .k,.drow .k{font-size:2.3vh;letter-spacing:.14em;color:var(--dim)}
+.tile .b{display:flex;align-items:flex-end;justify-content:space-between;gap:1.4vh}
+.tile .v{font-size:6vh;font-weight:700;line-height:1;white-space:nowrap}
+.tile .s,.drow .s{font-size:2.6vh;color:#c4ccd6;text-align:right;line-height:1.25;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.drow{flex:1;background:#0d131c;border-radius:2.4vh;padding:1.4vh 2.8vh;display:flex;align-items:center;gap:2.6vh;min-width:0}
+.drow .t{flex:1;min-width:0}
+.drow .v{font-size:4.6vh;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bars{display:flex;align-items:flex-end;gap:.45vh;height:8vh}
+#bars i{display:block;width:1.15vh;min-height:.6vh;border-radius:.4vh;background:#3a4656}
+#bars i.now{background:#3ee6aa}#bars i.past{background:#8592a3}
+/* 4 - weather */
+#scrWx{flex-direction:column;gap:1.6vh}
+.wb{background:#0d131c;border-radius:2.4vh;padding:2vh 3.2vh;min-width:0}
+#wxTop{display:flex;gap:1.6vh;height:22vh}
+#wxNow{flex:1.3;display:flex;align-items:center;gap:3.2vh}
+#wxIcon svg{width:12vh;height:12vh;display:block}
+#wxTemp{font-size:10vh;font-weight:500;line-height:1}
+#wxDesc{font-size:3.4vh;margin-top:.8vh;white-space:nowrap}#wxDesc span{color:var(--dim)}
+#wxDet{flex:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8vh 2.4vh;align-content:center}
+.kv .k{font-size:2.2vh;letter-spacing:.12em;color:var(--dim);white-space:nowrap}.kv .v{font-size:3.8vh;font-weight:600;white-space:nowrap}
+#wxWind{flex:1;display:flex;align-items:center;gap:3vh}
+#wxComp{width:16vh;height:16vh;flex:0 0 auto}
+#wxWs{font-size:6.2vh;font-weight:600;line-height:1;white-space:nowrap}
+#wxWd,#wxWg{font-size:2.7vh;color:var(--dim);white-space:nowrap}
+#wxMid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.6vh}
+#wxMid .wb{padding:1.4vh 2.8vh}
+#wxMid .v{font-size:4.6vh}
+#wxFc{flex:1;min-height:0;display:flex;flex-direction:column;gap:.6vh;padding:1.6vh 2.8vh}
+#wxFcHead{display:flex;justify-content:space-between;font-size:2.2vh;letter-spacing:.12em;color:var(--dim)}
+#wxSpot.ok{color:var(--ok)}#wxSpot.fair{color:#f6c84a}#wxSpot.bad{color:#ff8a5d}
+#wxHours{flex:1;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));text-align:center;align-items:center}
+.hr .t{font-size:2.5vh;color:var(--dim)}.hr svg{width:4.8vh;height:4.8vh;display:block;margin:.6vh auto}
+.hr .v{font-size:4.2vh;font-weight:600}.hr .w{font-size:2.3vh;color:var(--dim)}
 /* LOOK UP alert */
 #alert{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;
   background:radial-gradient(circle at 50% 45%,rgba(var(--brandRGB),.5) 0%,rgba(7,10,16,0) 62%),#070a10}
@@ -99,46 +171,97 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 .btns button.pri{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700}
 #geoMsg{font-size:2.6vh;color:var(--dim);margin-top:1.4vh;min-height:3vh}
 @media (orientation:portrait){
-  #app{flex-direction:column}
-  #radarWrap{width:100vw;height:100vw;max-width:none;max-height:52vh}
-  #side{padding:1.6vh 2.4vh}
+  #radarWrap{width:96vw;height:96vw}#scrRadar{flex-direction:column}
+  #cardTop{flex-direction:column}#photo{width:100%}#phBox{width:100%}
+  #scrStats{flex-direction:column}#wxTop{height:auto;flex-wrap:wrap}
 }
 </style>
 </head>
 <body>
 <div id="sky"></div><div id="stars"></div>
 <div id="app">
-  <div id="radarWrap"><canvas id="radar"></canvas></div>
-  <div id="side">
-    <div id="top"><span id="place">Overhead</span><span id="count"></span><span id="clock"></span><button id="gear" aria-label="Settings">&#9881;</button></div>
-    <div id="card">
-      <div id="badge">OVERHEAD</div>
-      <div class="in">
-        <div id="airRow"><img id="logo" alt=""><div id="airTxt"><div id="airline">&nbsp;</div><div id="flight">&mdash;</div></div><div id="cardShape"></div></div>
-        <div id="route">
-          <div class="ap"><div class="code" id="oCode">---</div><div class="city" id="oCity">&nbsp;</div></div>
-          <div id="track"><div id="trackLine"><div id="trackFill"></div>
-            <svg id="trackPlane" viewBox="-1 -1 2 2"><path id="tpPath" fill="#fff"/></svg></div>
-            <div id="trackTxt"></div></div>
-          <div class="ap r"><div class="code" id="dCode">---</div><div class="city" id="dCity">&nbsp;</div></div>
+  <div id="top"><span id="scrName"></span><span id="place">Overhead</span><span id="count"></span><span id="clock"></span><button id="gear" aria-label="Settings">&#9881;</button></div>
+  <div id="screens">
+    <section class="scr" id="scrPlane">
+      <div id="card"><div class="in">
+        <div id="cardTop">
+          <div id="cardMain">
+            <div id="airRow"><img id="logo" alt=""><div id="airTxt"><div id="airline">&nbsp;</div><div id="flight">&mdash;</div></div>
+              <div id="tags"><span id="distPill"></span><span id="tracked"></span></div></div>
+            <div id="route">
+              <div class="ap"><div class="code" id="oCode">---</div><div class="city" id="oCity">&nbsp;</div></div>
+              <div id="track"><div id="trackLine"><div id="trackFill"></div>
+                <svg id="trackPlane" viewBox="-1 -1 2 2"><path id="tpPath" fill="#fff"/></svg></div>
+                <div id="trackTxt"></div></div>
+              <div class="ap r"><div class="code" id="dCode">---</div><div class="city" id="dCity">&nbsp;</div></div>
+            </div>
+            <div id="noroute">Route not available</div>
+          </div>
+          <div id="photo"><div id="phBox"><div id="cardShape"></div><a id="phLink" target="_blank" rel="noopener"><img id="phImg" alt="Photo of this aircraft"></a></div><div id="phCap"></div></div>
         </div>
-        <div id="noroute">Route not available</div>
         <div id="stats">
           <div class="st"><div class="k">Altitude</div><div class="v" id="sAlt">&ndash;</div></div>
           <div class="st"><div class="k">Speed</div><div class="v" id="sSpd">&ndash;</div></div>
-          <div class="st"><div class="k">From you</div><div class="v" id="sDist">&ndash;</div></div>
           <div class="st"><div class="k">Heading</div><div class="v" id="sHdg">&ndash;</div></div>
-          <div class="st"><div class="k">Aircraft</div><div class="v" id="sType">&ndash;</div></div>
+          <div class="st"><div class="k">Vertical</div><div class="v" id="sVr">&ndash;</div></div>
+          <div class="st w2"><div class="k">Aircraft</div><div class="v" id="sType">&ndash;</div></div>
           <div class="st"><div class="k">Reg</div><div class="v" id="sReg">&ndash;</div></div>
+          <div class="st"><div class="k">Squawk</div><div class="v" id="sSq">&ndash;</div></div>
         </div>
-        <div id="rsrc"></div>
+      </div></div>
+    </section>
+
+    <section class="scr" id="scrRadar">
+      <div id="radarWrap"><canvas id="radar"></canvas></div>
+      <div id="rside"><div class="hd">IN RANGE &middot; CLOSEST FIRST</div><div id="list"></div><div id="empty"><b>Quiet skies</b><span id="emptyTxt"></span></div></div>
+    </section>
+
+    <section class="scr" id="scrStats">
+      <div class="col" id="nowCol"><div class="h2">NOW <span id="nowSub"></span></div>
+        <div id="nowGrid">
+          <div class="tile"><div class="k">AIRCRAFT NEARBY</div><div class="b"><span class="v" id="nN"></span><span class="s" id="nNs"></span></div></div>
+          <div class="tile"><div class="k">AIRLINES NEARBY</div><div class="b"><span class="v" id="nA"></span><span class="s" id="nAs"></span></div></div>
+          <div class="tile"><div class="k">NEAREST</div><div class="b"><span class="v" id="nNe"></span><span class="s" id="nNes"></span></div></div>
+          <div class="tile"><div class="k">HIGHEST</div><div class="b"><span class="v" id="nH"></span><span class="s" id="nHs"></span></div></div>
+          <div class="tile"><div class="k">FASTEST</div><div class="b"><span class="v" id="nF"></span><span class="s" id="nFs"></span></div></div>
+          <div class="tile"><div class="k">CLOSEST TODAY</div><div class="b"><span class="v" id="nC"></span><span class="s" id="nCs"></span></div></div>
+        </div></div>
+      <div class="col" id="dayCol"><div class="h2" style="color:#f6a24a">TODAY <span>&middot; since midnight</span></div>
+        <div class="drow"><div class="t"><div class="k">AIRCRAFT SEEN</div><div class="v" id="dSeen" style="font-size:7vh;font-weight:700"></div></div><div id="bars"></div></div>
+        <div class="drow"><div class="t"><div class="k">TOP AIRLINE</div><div class="v" id="dAir"></div></div><span class="s" id="dAirN"></span></div>
+        <div class="drow"><div class="t"><div class="k">TOP AIRCRAFT TYPE</div><div class="v" id="dTy"></div></div><span class="s" id="dTyN"></span></div>
+        <div class="drow"><div class="t"><div class="k">TOP DESTINATION</div><div class="v" id="dDe"></div></div><span class="s" id="dDeN"></span></div>
       </div>
-    </div>
-    <div id="empty"><b>Quiet skies</b><span id="emptyTxt"></span></div>
-    <div id="list"></div>
-    <div id="status"><span id="stTxt">Starting&hellip;</span><span id="stSrc"></span></div>
+    </section>
+
+    <section class="scr" id="scrWx">
+      <div id="wxTop">
+        <div class="wb" id="wxNow"><div id="wxIcon"></div><div><div id="wxTemp"></div><div id="wxDesc"></div></div></div>
+        <div class="wb" id="wxDet">
+          <div class="kv"><div class="k">HUMIDITY</div><div class="v" id="wxHum"></div></div>
+          <div class="kv"><div class="k">PRESSURE</div><div class="v" id="wxPr"></div></div>
+          <div class="kv"><div class="k">VISIBILITY</div><div class="v" id="wxVis"></div></div>
+          <div class="kv"><div class="k">DEW POINT</div><div class="v" id="wxDew"></div></div>
+        </div>
+        <div class="wb" id="wxWind">
+          <svg id="wxComp" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34" fill="none" stroke="#3a4656" stroke-width="2"/>
+            <g font-size="10" fill="#8592a3" text-anchor="middle" font-family="Roboto,Arial"><text x="40" y="15">N</text><text x="40" y="73">S</text><text x="10" y="44">W</text><text x="70" y="44">E</text></g>
+            <g id="wxArrow"><path d="M40 62 L40 22 M33 30 L40 20 L47 30" fill="none" stroke="#3ee6aa" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+          <div><div id="wxWs"></div><div id="wxWd"></div><div id="wxWg"></div></div>
+        </div>
+      </div>
+      <div id="wxMid">
+        <div class="wb kv"><div class="k">RAIN NEXT HOUR</div><div class="v" id="wxRain"></div></div>
+        <div class="wb kv"><div class="k">CLOUD COVER</div><div class="v" id="wxCloud"></div></div>
+        <div class="wb kv"><div class="k">TODAY LOW / HIGH</div><div class="v" id="wxLH"></div></div>
+        <div class="wb kv"><div class="k">SUNRISE / SUNSET</div><div class="v" id="wxSun"></div></div>
+      </div>
+      <div class="wb" id="wxFc"><div id="wxFcHead"><span>NEXT 24 HOURS &middot; 3-HOUR STEPS</span><span id="wxSpot"></span></div><div id="wxHours"></div></div>
+    </section>
   </div>
+  <div id="foot"><span id="stTxt">Starting&hellip;</span><div id="dots"></div><span id="nextTxt"></span></div>
 </div>
+<div id="rotBar"></div>
 
 <div id="alert">
   <div class="ring"></div><div class="ring b"></div><div class="ring c"></div>
@@ -180,6 +303,9 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
       <label class="chk"><input id="fAnim" type="checkbox">Animations (radar sweep, glow)</label>
       <label class="chk"><input id="fChime" type="checkbox">Chime on &ldquo;LOOK UP!&rdquo;</label>
     </div>
+    <div style="grid-column:1/-1"><label class="chk" style="margin-top:0"><input id="fRot" type="checkbox">Rotate screens automatically (tap a dot at the bottom to jump; tapping the screen pauses for 60 s)</label>
+      <div style="display:flex;gap:2vh;margin-top:.8vh;flex-wrap:wrap"><label style="flex:1">Closest plane (seconds, 0 = hide)<input id="fRotP" type="number" min="0" max="300"></label><label style="flex:1">Radar<input id="fRotR" type="number" min="0" max="300"></label><label style="flex:1">Stats<input id="fRotS" type="number" min="0" max="300"></label><label style="flex:1">Weather (Open-Meteo)<input id="fRotW" type="number" min="0" max="300"></label></div>
+      <label class="chk"><input id="fPh" type="checkbox">Aircraft photos from planespotters.net (falls back to the silhouette)</label></div>
     <div>
       <label class="chk"><input id="fDim" type="checkbox">Dim screen at night</label>
       <label class="chk"><input id="fGround" type="checkbox">Show planes on the ground</label>
@@ -197,10 +323,10 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.25.17';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.27.2342';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
-var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45};
+var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true};
 function loadSettings(){
   var s={},k;for(k in DEFAULTS)s[k]=DEFAULTS[k];
   try{var raw=localStorage.getItem('overhead.settings');if(raw){var o=JSON.parse(raw);for(k in o)if(k in s)s[k]=o[k];}}catch(e){}
@@ -394,6 +520,7 @@ function ingest(list){
     p.type=a.t||p.type||'';
     p.desc=a.desc||p.desc||'';
     p.own=a.ownOp||p.own||'';
+    p.sq=a.squawk||p.sq||'';
     p.ground=ground;
     p.alt=ground?0:(typeof a.alt_baro==='number'?a.alt_baro:(typeof a.alt_geom==='number'?a.alt_geom:null));
     p.gs=typeof a.gs==='number'?a.gs:null;
@@ -1019,7 +1146,7 @@ function buildMap(R,key){
 cv.addEventListener('click',function(e){
   var r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*W/r.height,best=null,bd=W*0.08;
   hitList.forEach(function(h){var d=Math.hypot(h[0]-x,h[1]-y);if(d<bd){bd=d;best=h[2];}});
-  if(best){selectedHex=best;manualUntil=Date.now()+60000;renderPanel();}
+  if(best){selectedHex=best;showScreen(0,true);}
 });
 
 /* ---------------- panel ---------------- */
@@ -1064,20 +1191,19 @@ function setBrand(hex){
   var rgb=hexRGB(hex),st=document.documentElement.style;
   st.setProperty('--brand',hex);st.setProperty('--brandRGB',rgb.join(','));
 }
-var lastLogo='';
+var lastLogo='',rsrcTxt='';
 function renderPanel(){
   var now=Date.now(),arr=currentList(now);
   if(!(selectedHex&&planes[selectedHex]&&now<manualUntil)){
     var air=arr.filter(function(p){return !p.ground;});
     selectedHex=(air[0]||arr[0]||{}).hex||null;
   }
-  if(!S.anim)drawRadar(arr,now);
+  rotTick(now);
+  var on=SCR[cur]?SCR[cur].id:'';
+  if(on==='radar'&&!S.anim)drawRadar(arr,now);
   $('count').textContent=arr.length?arr.length+(arr.length===1?' plane':' planes'):'';
   $('count').style.display=arr.length?'':'none';
-  var p=selectedHex&&planes[selectedHex];
-  $('card').style.display=p?'':'none';
-  $('empty').style.display=p?'none':'flex';
-  $('emptyTxt').textContent=lastOK?'No aircraft within '+S.radius+' miles right now.':'Looking for aircraft…';
+  var p=selectedHex&&planes[selectedHex],selLeg=null;rsrcTxt='';
   if(p){
     if(p.hex!==shownHex){var card=$('card');card.classList.remove('swap');void card.offsetWidth;card.classList.add('swap');shownHex=p.hex;}
     var RI=routeInfo(p,true),ai=airlineInfo(p,RI.rt);
@@ -1087,40 +1213,273 @@ function renderPanel(){
     $('flight').textContent=p.cs||p.reg||p.hex.toUpperCase();
     var logo=ai.iata?'https://images.kiwi.com/airlines/128/'+ai.iata+'.png':'';
     if(logo!==lastLogo){lastLogo=logo;var im=$('logo');im.style.display='none';if(logo){im.onload=function(){im.style.display='block';};im.onerror=function(){im.style.display='none';};im.src=logo;}}
-    var leg=RI.leg;
+    var dtxt=(p.d<10?p.d.toFixed(1):Math.round(p.d))+' MI · '+compass(p.b),oh=!p.ground&&p.d<2;
+    $('distPill').textContent=(oh?'OVERHEAD · ':'')+dtxt;$('distPill').className=oh?'oh':'';
+    $('tracked').textContent='Tracked '+Math.max(1,Math.round((now-p.born)/60000))+' min';
+    var leg=RI.leg;selLeg=leg;
     if(leg){
       $('route').style.display='flex';$('noroute').style.display='none';
-      $('oCode').textContent=leg.o||'---';$('oCity').textContent=leg.oc||'\u00a0';$('dCode').textContent=leg.d||'---';$('dCity').textContent=leg.dc||'\u00a0';
+      $('oCode').textContent=leg.o||'---';$('oCity').textContent=leg.oc||' ';$('dCode').textContent=leg.d||'---';$('dCity').textContent=leg.dc||' ';
       var dO=distMi(leg.olat,leg.olon,p.plat,p.plon),dD=distMi(p.plat,p.plon,leg.dlat,leg.dlon);
       var pct=Math.max(2,Math.min(98,dO/(dO+dD)*100));
       $('trackFill').style.width=pct+'%';$('trackPlane').style.left=pct+'%';
-      $('trackTxt').textContent=(p.ground?'':(dD<15?'Arriving soon':(dO<15?'Just departed':fmtInt(dD)+' mi to go')))+(leg.arrT&&!p.ground?' \u00b7 arr '+leg.arrT+' local':'');
+      $('trackTxt').textContent=(p.ground?'':(dD<15?'Arriving soon':(dO<15?'Just departed':fmtInt(dD)+' mi to go')))+(leg.arrT&&!p.ground?' · arr '+leg.arrT+' local':'');
+      tallyDest(p,leg);
     }else{
       $('route').style.display='none';$('noroute').style.display='block';
-      $('noroute').textContent=RI.pending?'Looking up route\u2026':'Route unknown';
+      $('noroute').textContent=RI.pending?'Looking up route…':(/^[A-Z]{3}\d/.test(p.cs||'')?'Route unknown':'Route unknown · no flight number to look up');
     }
-    $('rsrc').textContent=leg&&RI.src?'Route: '+RI.src:(RI.pending||!/^[A-Z]{3}\d/.test(p.cs||'')?'':'Route: no source had a match');
+    rsrcTxt=leg&&RI.src?'Route: '+RI.src:(RI.pending||!/^[A-Z]{3}\d/.test(p.cs||'')?'':'Route: no source had a match');
     var vr=p.vr>350?' <span class="up">▲</span>':(p.vr<-350?' <span class="dn">▼</span>':'');
     $('sAlt').innerHTML=p.ground?'On ground':(p.alt==null?'–':fmtInt(p.alt)+' ft'+vr);
     $('sSpd').textContent=p.gs==null?'–':fmtInt(p.gs*1.15078)+' mph';
-    $('sDist').textContent=(p.d<10?p.d.toFixed(1):Math.round(p.d))+' mi '+compass(p.b);
     $('sHdg').textContent=p.trk==null?'–':compass(p.trk)+' '+Math.round(p.trk)+'°';
+    var sv=$('sVr');
+    if(p.ground){sv.textContent='–';sv.className='v';}
+    else if(Math.abs(p.vr||0)<200){sv.textContent='Level';sv.className='v';}
+    else{sv.textContent=(p.vr>0?'+':'−')+fmtInt(Math.abs(p.vr))+' fpm';sv.className='v '+(p.vr>0?'up':'dn');}
     $('sType').textContent=typeName(p);
     $('sReg').textContent=p.reg||'–';
-    $('badge').style.display=(!p.ground&&p.d<2)?'block':'none';
+    $('sSq').textContent=p.sq||'–';
+    renderPhoto(p);
   }else setBrand('#ffb020');
-  var rows=arr.filter(function(x){return x.hex!==selectedHex;}).slice(0,4);
-  $('list').innerHTML=rows.map(function(x){
-    return '<div class="row" data-hex="'+esc(x.hex)+'"><span class="dot" style="background:'+altColor(x)+';box-shadow:0 0 1vh '+altColor(x)+'"></span><span class="cs">'+esc(x.cs||x.reg||x.hex.toUpperCase())+'</span><span class="ty">'+esc(typeName(x))+'</span><span class="al">'+(x.ground?'GND':(x.alt==null?'–':fmtInt(x.alt)+'′'))+'</span><span class="di">'+(x.d<10?x.d.toFixed(1):Math.round(x.d))+' mi</span></div>';
+  // radar screen list: closest first, selected plane highlighted
+  $('empty').style.display=arr.length?'none':'flex';$('list').style.display=arr.length?'':'none';
+  $('emptyTxt').textContent=lastOK?'No aircraft within '+S.radius+' miles right now.':'Looking for aircraft…';
+  $('list').innerHTML=arr.slice(0,6).map(function(x){
+    var sel=x.hex===selectedHex,col=altColor(x),sub=typeName(x);
+    if(sel&&selLeg&&selLeg.o&&selLeg.d)sub+=' · '+selLeg.o+' → '+selLeg.d;
+    var va=x.ground?'':(x.vr>350?' ▲':(x.vr<-350?' ▼':''));
+    return '<div class="row'+(sel?' sel':'')+'" data-hex="'+esc(x.hex)+'"><span class="dot" style="background:'+col+';box-shadow:0 0 1vh '+col+'"></span>'+
+      '<div class="mid"><div class="cs">'+esc(x.cs||x.reg||x.hex.toUpperCase())+'</div><div class="ty">'+esc(sub)+'</div></div>'+
+      '<div class="rt"><div class="di">'+(x.d<10?x.d.toFixed(1):Math.round(x.d))+' mi '+compass(x.b)+'</div><div class="al">'+(x.ground?'On ground':(x.alt==null?'–':fmtInt(x.alt)+'′'+va))+'</div></div></div>';
   }).join('');
-  if(!S.fiaKey)rows.forEach(function(x){routeFor(x.cs);});
-  var st=$('status');
-  if(lastErr){st.className='err';$('stTxt').textContent=lastErr;}
-  else{st.className='';$('stTxt').textContent=lastOK?'Updated '+Math.round((now-lastOK)/1000)+'s ago':'Connecting…';}
-  $('stSrc').textContent=srcName?'Data: '+srcName:'';
+  if(!S.fiaKey)arr.filter(function(x){return x.hex!==selectedHex;}).slice(0,4).forEach(function(x){routeFor(x.cs);});
+  if(on==='stats')renderStats(arr,now);
+  // footer
+  var txt;
+  if(lastErr){$('foot').className='err';txt=lastErr;}
+  else{$('foot').className='';txt=(srcName?'Data: '+srcName+' · ':'')+(lastOK?'updated '+Math.round((now-lastOK)/1000)+' s ago':'connecting…');}
+  if(on==='plane'&&rsrcTxt&&!lastErr)txt=rsrcTxt+' · '+txt;
+  if(on==='stats'&&!lastErr)txt='Counted on this device · resets at midnight';
+  if(on==='wx'&&WX&&!lastErr)txt='Weather: Open-Meteo.com (CC BY 4.0) · updated '+clockTxt(WX.t);
+  $('stTxt').textContent=txt;
+  var paused=now<manualUntil,nx=nextOk(cur);
+  $('nextTxt').textContent=!S.rotate?'':(paused?'Paused · resumes in '+Math.ceil((manualUntil-now)/1000)+' s':(nx!==cur?'next: '+SCR[nx].title:''));
+  var dots=$('dots').children;
+  for(var i=0;i<dots.length;i++){dots[i].className=(i===cur?'on':'')+(S[SCR[i].key]>0?(scrOk(i)?'':' na'):' off');}
+  var bar=$('rotBar');
+  if(S.rotate&&!paused&&SCR[cur]&&nx!==cur)bar.style.width=Math.min(100,(now-scrStart)/(S[SCR[cur].key]*1000)*100)+'%';
+  else bar.style.width='0';
   checkAlert(arr,now);
 }
-$('list').addEventListener('click',function(e){var r=e.target.closest('.row');if(r){selectedHex=r.getAttribute('data-hex');manualUntil=Date.now()+60000;renderPanel();}});
+$('list').addEventListener('click',function(e){var r=e.target.closest('.row');if(r){selectedHex=r.getAttribute('data-hex');showScreen(0,true);}});
+function clockTxt(t){var d=new Date(t),h=d.getHours(),m=d.getMinutes();return ((h%12)||12)+':'+(m<10?'0':'')+m+(h<12?' AM':' PM');}
+
+/* ---------------- rotating screens ---------------- */
+var SCR=[{id:'plane',el:'scrPlane',name:'CLOSEST PLANE',title:'Closest plane',key:'rotPlane'},
+         {id:'radar',el:'scrRadar',name:'RADAR',title:'Radar',key:'rotRadar'},
+         {id:'stats',el:'scrStats',name:'STATS',title:'Stats',key:'rotStats'},
+         {id:'wx',el:'scrWx',name:'WEATHER',title:'Weather',key:'rotWx'}];
+var cur=-1,scrStart=0;
+function scrOk(i){
+  var s=SCR[i];if(!s||!(S[s.key]>0))return false;
+  if(s.id==='plane')return !!(selectedHex&&planes[selectedHex]);
+  if(s.id==='wx')return !!WX;
+  return true;
+}
+function nextOk(from){
+  for(var k=1;k<=SCR.length;k++){var i=((from+k)%SCR.length+SCR.length)%SCR.length;if(scrOk(i))return i;}
+  return 1;   // nothing enabled: radar
+}
+function showScreen(i,manual,quiet){
+  if(manual)manualUntil=Date.now()+60000;
+  if(i!==cur){
+    cur=i;scrStart=Date.now();
+    SCR.forEach(function(s,k){$(s.el).classList.toggle('on',k===i);});
+    $('scrName').textContent=SCR[i].name;
+    var bar=$('rotBar');bar.style.transition='none';bar.style.width='0';void bar.offsetWidth;bar.style.transition='';
+    if(SCR[i].id==='wx')renderWx();
+  }
+  if(!quiet)renderPanel();
+}
+function rotTick(now){
+  if(cur<0||!scrOk(cur)){var n=nextOk(cur<0?-1:cur);if(n!==cur)showScreen(n,false,true);return;}
+  if(!S.rotate||now<manualUntil){scrStart=now;return;}
+  if(now-scrStart>=S[SCR[cur].key]*1000){var n2=nextOk(cur);if(n2!==cur)showScreen(n2,false,true);else scrStart=now;}
+}
+(function(){
+  $('dots').innerHTML=SCR.map(function(s,i){return '<button type="button" data-i="'+i+'" aria-label="Show '+s.title+'"><i></i></button>';}).join('');
+  $('dots').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var i=+b.getAttribute('data-i');if(scrOk(i))showScreen(i,true);});
+  $('screens').addEventListener('click',function(e){if(e.target.closest('a'))return;manualUntil=Math.max(manualUntil,Date.now()+60000);renderPanel();});
+})();
+
+/* ---------------- aircraft photos (planespotters.net public photo API) ----------------
+   Looked up by transponder hex for the card plane only. Per their terms: the JSON reply may be
+   cached up to 24 h, the image is always loaded straight from their URL (never stored), the
+   photographer is credited next to it and the photo links to its planespotters.net page. */
+var PH={};try{PH=JSON.parse(localStorage.getItem('overhead.photos')||'{}')||{};}catch(e){PH={};}
+var phBusy=false,phFail=0,phPauseUntil=0;
+function savePH(){
+  try{var k=Object.keys(PH);if(k.length>300)k.sort(function(a,b){return PH[a].t-PH[b].t;}).slice(0,k.length-250).forEach(function(x){delete PH[x];});
+    localStorage.setItem('overhead.photos',JSON.stringify(PH));}catch(e){}
+}
+function photoFor(p){
+  var c=PH[p.hex];
+  if(c&&Date.now()-c.t<24*3600e3)return c.ph||null;
+  if(phBusy||Date.now()<phPauseUntil)return undefined;
+  phBusy=true;
+  fetchJSON('https://api.planespotters.net/pub/photos/hex/'+encodeURIComponent(p.hex),8000).then(function(j){
+    var x=j&&j.photos&&j.photos[0],tl=x&&(x.thumbnail_large||x.thumbnail);
+    PH[p.hex]={t:Date.now(),ph:tl&&tl.src&&x.link?{src:tl.src,link:x.link,by:x.photographer||''}:null};phFail=0;savePH();
+  },function(){if(++phFail>=3){phFail=0;phPauseUntil=Date.now()+6*3600e3;}}).then(function(){phBusy=false;renderPanel();});
+  return undefined;
+}
+var phShown='';
+function renderPhoto(p){
+  var ph=(S.photos&&!DEMO)?photoFor(p):null,lk=$('phLink'),im=$('phImg');
+  if(ph){
+    if(phShown!==ph.src){phShown=ph.src;im.onerror=function(){if(PH[p.hex])PH[p.hex].ph=null;phShown='';lk.style.display='none';$('cardShape').style.visibility='';};im.src=ph.src;}
+    lk.href=ph.link;lk.style.display='block';$('cardShape').style.visibility='hidden';
+    $('phCap').textContent='© '+(ph.by||'photographer')+' · planespotters.net';
+  }else{
+    if(phShown){phShown='';im.removeAttribute('src');}
+    lk.style.display='none';$('cardShape').style.visibility='';
+    $('phCap').textContent=ph===undefined?'Looking for a photo…':(S.photos&&!DEMO?'No photo found · ':'')+typeName(p)+' silhouette';
+  }
+}
+
+/* ---------------- today's stats (counted on this device, reset at midnight) ---------------- */
+var TODAY=null,todayDirty=false;
+function dayKey(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function today(){
+  var k=dayKey();
+  if(!TODAY){try{TODAY=JSON.parse(localStorage.getItem('overhead.today')||'null');}catch(e){TODAY=null;}}
+  if(!TODAY||TODAY.day!==k){TODAY={day:k,seen:{},n:0,hours:[],al:{},ty:{},dest:{},destSeen:{},close:null};todayDirty=true;}
+  return TODAY;
+}
+function saveToday(){if(!todayDirty)return;todayDirty=false;try{localStorage.setItem('overhead.today',JSON.stringify(TODAY));}catch(e){}}
+function tally(now){
+  if(DEMO)return;
+  var T=today(),h=new Date(now).getHours();
+  for(var hex in planes){
+    var p=planes[hex];
+    if(!T.seen[hex]){
+      T.seen[hex]=1;T.n++;T.hours[h]=(T.hours[h]||0)+1;todayDirty=true;
+      var ai=airlineInfo(p,null);if(ai.name)T.al[ai.name]=(T.al[ai.name]||0)+1;
+      var tn=typeName(p);if(tn&&tn!=='Unknown')T.ty[tn]=(T.ty[tn]||0)+1;
+    }
+    if(!p.ground){var d=distMi(S.lat,S.lon,p.lat,p.lon);if(!T.close||d<T.close.d){T.close={d:d,cs:p.cs||p.reg||hex.toUpperCase(),t:now};todayDirty=true;}}
+  }
+  saveToday();
+}
+function tallyDest(p,leg){
+  if(DEMO||!leg||!leg.d)return;var T=today();if(T.destSeen[p.hex])return;
+  T.destSeen[p.hex]=1;var k=leg.d+(leg.dc?' · '+leg.dc:'');T.dest[k]=(T.dest[k]||0)+1;todayDirty=true;saveToday();
+}
+function topOf(o){var bk='',bn=0;for(var k in o)if(o[k]>bn){bn=o[k];bk=k;}return bn?[bk,bn]:null;}
+function setT(id,v,sub){$(id).textContent=v;$(id+'s').innerHTML=sub||'';}
+function renderStats(arr,now){
+  var air=arr.filter(function(p){return !p.ground;}),T=today(),i;
+  $('nowSub').textContent='· within '+S.radius+' mi';
+  setT('nN',arr.length,arr.length-air.length?(arr.length-air.length)+' on ground':(air.length?'all airborne':''));
+  var names={},nl=[];air.forEach(function(p){var n=airlineInfo(p,null).name;if(n&&!names[n]){names[n]=1;nl.push(n);}});
+  setT('nA',nl.length,esc(nl.slice(0,2).join(' · ')));
+  function who(p){return esc(p.cs||p.reg||p.hex.toUpperCase())+'<br>'+esc(p.type||'');}
+  if(air.length){
+    var ne=air[0],hi=air[0],fa=air[0];
+    air.forEach(function(p){if((p.alt||0)>(hi.alt||0))hi=p;if((p.gs||0)>(fa.gs||0))fa=p;});
+    setT('nNe',(ne.d<10?ne.d.toFixed(1):Math.round(ne.d))+' mi',who(ne));
+    setT('nH',hi.alt==null?'–':fmtInt(hi.alt)+' ft',who(hi));
+    setT('nF',fa.gs==null?'–':fmtInt(fa.gs*1.15078)+' mph',who(fa));
+  }else{setT('nNe','–','');setT('nH','–','');setT('nF','–','');}
+  if(T.close)setT('nC',(T.close.d<10?T.close.d.toFixed(1):Math.round(T.close.d))+' mi',esc(T.close.cs)+'<br>'+clockTxt(T.close.t));
+  else setT('nC','–',DEMO?'not counted in demo':'');
+  $('dSeen').textContent=T.n;
+  var mx=1,h=new Date(now).getHours(),bh='';for(i=0;i<24;i++)mx=Math.max(mx,T.hours[i]||0);
+  for(i=0;i<24;i++)bh+='<i class="'+(i===h?'now':(i<h?'past':''))+'" style="height:'+Math.round(((T.hours[i]||0)/mx)*100)+'%"></i>';
+  $('bars').innerHTML=bh;
+  var ta=topOf(T.al),tt=topOf(T.ty),td=topOf(T.dest);
+  $('dAir').textContent=ta?ta[0]:'–';$('dAirN').textContent=ta?ta[1]+(ta[1]===1?' flight':' flights'):'';
+  $('dTy').textContent=tt?tt[0]:'–';$('dTyN').textContent=tt?tt[1]+' aircraft':'';
+  $('dDe').textContent=td?td[0]:'–';$('dDeN').textContent=td?td[1]+(td[1]===1?' flight':' flights'):'';
+}
+
+/* ---------------- weather (Open-Meteo, free, no key; once every 30 min) ---------------- */
+var WX=null;
+try{var wc=JSON.parse(localStorage.getItem('overhead.wx')||'null');if(wc&&Date.now()-wc.t<3*3600e3)WX=wc;}catch(e){}
+function wxFetch(){
+  if(S.lat==null||!(S.rotWx>0))return;
+  var u='https://api.open-meteo.com/v1/forecast?latitude='+(+S.lat).toFixed(3)+'&longitude='+(+S.lon).toFixed(3)+
+    '&current=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,is_day,weather_code,cloud_cover,pressure_msl,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m'+
+    '&hourly=temperature_2m,weather_code,is_day,wind_speed_10m,precipitation_probability&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset'+
+    '&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=2';
+  fetchJSON(u,12000).then(function(j){
+    if(!j||!j.current)return;
+    WX={t:Date.now(),lat:S.lat,lon:S.lon,j:j};try{localStorage.setItem('overhead.wx',JSON.stringify(WX));}catch(e){}
+    if(SCR[cur]&&SCR[cur].id==='wx')renderWx();
+  },function(){});
+}
+var WXI={sun:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6" fill="#f6c84a"/><path d="M12 2v2.4M12 19.6V22M2 12h2.4M19.6 12H22M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7" stroke="#f6c84a" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  moon:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="#e6ebf2"/></svg>',
+  cloud:'<svg viewBox="0 0 24 24"><path d="M7 19h10.5a4.5 4.5 0 0 0 .4-9A6.5 6.5 0 0 0 5.6 9.6 4.8 4.8 0 0 0 7 19z" fill="#9fb0c3"/></svg>',
+  psun:'<svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4" fill="#f6c84a"/><path d="M8.5 1.8v1.6M1.8 8.5h1.6M3.8 3.8l1.1 1.1M13.2 3.8l-1.1 1.1" stroke="#f6c84a" stroke-width="1.6" stroke-linecap="round"/><path d="M9 20h9a4 4 0 0 0 .3-8 5.6 5.6 0 0 0-10.6 1.2A3.4 3.4 0 0 0 9 20z" fill="#9fb0c3"/></svg>',
+  pmoon:'<svg viewBox="0 0 24 24"><path d="M14 9.5A5.6 5.6 0 0 1 6.6 2.2a5.6 5.6 0 1 0 7.4 7.3z" fill="#e6ebf2"/><path d="M9 20h9a4 4 0 0 0 .3-8 5.6 5.6 0 0 0-10.6 1.2A3.4 3.4 0 0 0 9 20z" fill="#9fb0c3"/></svg>',
+  rain:'<svg viewBox="0 0 24 24"><path d="M7 15h10.5a4.2 4.2 0 0 0 .4-8.4A6 6 0 0 0 5.8 6.9 4.1 4.1 0 0 0 7 15z" fill="#9fb0c3"/><path d="M8 17.5l-1 3M12 17.5l-1 3M16 17.5l-1 3" stroke="#5aa9ff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  snow:'<svg viewBox="0 0 24 24"><path d="M7 15h10.5a4.2 4.2 0 0 0 .4-8.4A6 6 0 0 0 5.8 6.9 4.1 4.1 0 0 0 7 15z" fill="#9fb0c3"/><circle cx="8" cy="19" r="1.2" fill="#fff"/><circle cx="12" cy="20.5" r="1.2" fill="#fff"/><circle cx="16" cy="19" r="1.2" fill="#fff"/></svg>',
+  storm:'<svg viewBox="0 0 24 24"><path d="M7 15h10.5a4.2 4.2 0 0 0 .4-8.4A6 6 0 0 0 5.8 6.9 4.1 4.1 0 0 0 7 15z" fill="#8592a3"/><path d="M12.5 14l-3 5h3l-1.5 4 4.5-6h-3l1.5-3z" fill="#f6c84a"/></svg>',
+  fog:'<svg viewBox="0 0 24 24"><path d="M4 9h16M3 13h18M5 17h14" stroke="#9fb0c3" stroke-width="2" stroke-linecap="round"/></svg>'};
+function wxInfo(code,day){
+  var c=code|0;
+  if(c===0)return [day?'Clear':'Clear night',day?'sun':'moon'];
+  if(c===1)return ['Mainly clear',day?'sun':'moon'];
+  if(c===2)return ['Partly cloudy',day?'psun':'pmoon'];
+  if(c===3)return ['Overcast','cloud'];
+  if(c===45||c===48)return ['Fog','fog'];
+  if(c>=51&&c<=57)return ['Drizzle','rain'];
+  if(c>=61&&c<=67)return [c>=66?'Freezing rain':'Rain','rain'];
+  if(c>=71&&c<=77)return ['Snow','snow'];
+  if(c>=80&&c<=82)return ['Showers','rain'];
+  if(c===85||c===86)return ['Snow showers','snow'];
+  if(c>=95)return ['Thunderstorm','storm'];
+  return ['–','cloud'];
+}
+function renderWx(){
+  if(!WX)return;
+  var j=WX.j,c=j.current,cu=j.current_units||{},h=j.hourly||{},d=j.daily||{},i;
+  var info=wxInfo(c.weather_code,c.is_day);
+  $('wxIcon').innerHTML=WXI[info[1]];
+  $('wxTemp').textContent=Math.round(c.temperature_2m)+'°F';
+  $('wxDesc').innerHTML=esc(info[0])+' <span>· feels '+Math.round(c.apparent_temperature)+'°</span>';
+  $('wxHum').textContent=Math.round(c.relative_humidity_2m)+'%';
+  $('wxPr').textContent=(c.pressure_msl*0.02953).toFixed(2)+' inHg';
+  var vis=c.visibility/(cu.visibility==='ft'?5280:1609.34);
+  $('wxVis').textContent=(vis>=10?Math.round(vis):vis.toFixed(1))+' mi';
+  $('wxDew').textContent=Math.round(c.dew_point_2m)+'°F';
+  $('wxWs').textContent=Math.round(c.wind_speed_10m)+' mph';
+  $('wxWd').textContent='From '+compass(c.wind_direction_10m)+' · '+Math.round(c.wind_direction_10m)+'°';
+  $('wxWg').textContent='Gusts '+Math.round(c.wind_gusts_10m)+' mph';
+  $('wxArrow').setAttribute('transform','rotate('+Math.round((c.wind_direction_10m+180)%360)+' 40 40)');
+  var tm=h.time||[],hk=String(c.time||'').slice(0,13),hi=0;
+  for(i=0;i<tm.length;i++){if(tm[i].slice(0,13)>=hk){hi=i;break;}}
+  var pp=h.precipitation_probability&&h.precipitation_probability[hi];
+  $('wxRain').textContent=pp==null?'–':Math.round(pp)+'%';
+  $('wxCloud').textContent=Math.round(c.cloud_cover)+'%';
+  $('wxLH').textContent=d.temperature_2m_min?Math.round(d.temperature_2m_min[0])+'° / '+Math.round(d.temperature_2m_max[0])+'°':'–';
+  function hm(t){var m=/T(\d{2}):(\d{2})/.exec(t||'');if(!m)return '';var x=+m[1];return ((x%12)||12)+':'+m[2];}
+  $('wxSun').textContent=d.sunrise?hm(d.sunrise[0])+' / '+hm(d.sunset[0]):'–';
+  var cc=c.cloud_cover,sp=$('wxSpot');
+  if(cc<=30&&vis>=8){sp.className='ok';sp.textContent='GREAT SPOTTING: '+(cc<=10?'CLEAR':cc+'% CLOUD')+', '+Math.round(vis)+' MI VIS';}
+  else if(cc<=70&&vis>=4){sp.className='fair';sp.textContent='FAIR SPOTTING: '+cc+'% CLOUD, '+Math.round(vis)+' MI VIS';}
+  else{sp.className='bad';sp.textContent='POOR SPOTTING: '+(vis<4?Math.round(vis*10)/10+' MI VIS':cc+'% CLOUD');}
+  var out='';
+  for(var k=0;k<8;k++){
+    var x=hi+1+k*3;if(x>=tm.length)break;
+    var hr=+tm[x].slice(11,13),inf=wxInfo(h.weather_code[x],h.is_day[x]);
+    out+='<div class="hr"><div class="t">'+(((hr%12)||12)+(hr<12?' AM':' PM'))+'</div>'+WXI[inf[1]]+'<div class="v">'+Math.round(h.temperature_2m[x])+'°</div><div class="w">'+Math.round(h.wind_speed_10m[x])+' mph</div></div>';
+  }
+  $('wxHours').innerHTML=out;
+}
 
 /* ---------------- LOOK UP! alert ---------------- */
 function checkAlert(arr,now){
@@ -1187,7 +1546,7 @@ var pollTimer=null,failCount=0;
 function poll(){
   clearTimeout(pollTimer);
   (DEMO?demoFetch():fetchAircraft()).then(function(list){
-    ingest(list);lastOK=Date.now();lastErr='';failCount=0;renderPanel();alBulkCheck();
+    ingest(list);lastOK=Date.now();lastErr='';failCount=0;tally(lastOK);renderPanel();alBulkCheck();
   },function(e){
     failCount++;srcName='';lastErr=(e&&e.message?e.message:'Can’t reach flight data')+' – retrying…';
     if(S.source==='auto')providerIdx=(providerIdx+1)%PROVIDERS.length;
@@ -1200,7 +1559,7 @@ function poll(){
 var lastFrame=0;
 function frame(ts){
   requestAnimationFrame(frame);
-  if(!S.anim||S.lat==null||document.hidden)return;
+  if(!S.anim||S.lat==null||document.hidden||!SCR[cur]||SCR[cur].id!=='radar')return;
   if(ts-lastFrame<40)return; // ~25 fps – easy on the Echo
   lastFrame=ts;
   var now=Date.now();drawRadar(currentList(now),now);
@@ -1209,6 +1568,7 @@ requestAnimationFrame(frame);
 function tickClock(){var d=new Date(),h=d.getHours(),m=d.getMinutes();$('clock').textContent=((h%12)||12)+':'+(m<10?'0':'')+m+(h<12?' AM':' PM');}
 setInterval(function(){tickClock();if(S.lat!=null){renderPanel();}},1000);
 setInterval(updateSky,60000);
+setInterval(wxFetch,30*60e3);
 window.addEventListener('resize',function(){if(S.lat!=null)renderPanel();});
 var wl=null;function keepAwake(){try{if(navigator.wakeLock&&!wl)navigator.wakeLock.request('screen').then(function(l){wl=l;l.addEventListener('release',function(){wl=null;});}).catch(function(){});}catch(e){}}
 document.addEventListener('visibilitychange',function(){if(!document.hidden)keepAwake();});
@@ -1235,7 +1595,7 @@ $('ver').textContent='v'+APP_VERSION+(LOADER_BASE?' (via loader)':'');
 function openSettings(){
   $('fName').value=S.name||'';$('fLat').value=S.lat==null?'':S.lat;$('fLon').value=S.lon==null?'':S.lon;
   $('fRad').value=S.radius;$('fRef').value=S.refresh;$('fSrc').value=S.source;$('fCustom').value=S.custom||'';$('fGround').checked=!!S.ground;
-  $('fAlert').value=S.alertMi;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
+  $('fAlert').value=S.alertMi;$('fRot').checked=!!S.rotate;$('fRotP').value=S.rotPlane;$('fRotR').value=S.rotRadar;$('fRotS').value=S.rotStats;$('fRotW').value=S.rotWx;$('fPh').checked=!!S.photos;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
   $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;$('fAlB').checked=!!S.alBulk;$('fAlBD').value=S.alBulkDay;
   var su=svcU('airlabs');$('alSnapStat').textContent=S.alKey&&S.alBulk?('Snapshots today '+(su.bn||0)+' / '+S.alBulkDay+(ALSNAP?' \u00b7 last at '+new Date(ALSNAP.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+', '+ALSNAP.n+' flights with routes':' \u00b7 none yet')):'';
   svcUsable(SVC_BY.airlabs);svcUsable(SVC_BY.adb);$('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
@@ -1265,6 +1625,10 @@ $('bSave').onclick=function(){
   S.source=$('fSrc').value;S.custom=$('fCustom').value.trim();S.ground=$('fGround').checked;
   var al=parseFloat($('fAlert').value);S.alertMi=isNaN(al)?1.5:Math.max(0,Math.min(10,al));
   S.anim=$('fAnim').checked;S.chime=$('fChime').checked;S.dim=$('fDim').checked;
+  S.rotate=$('fRot').checked;S.photos=$('fPh').checked;
+  function secs(id,d){var v=parseInt($(id).value,10);return isNaN(v)?d:Math.max(0,Math.min(300,v));}
+  var oldWx=S.rotWx;S.rotPlane=secs('fRotP',12);S.rotRadar=secs('fRotR',12);S.rotStats=secs('fRotS',10);S.rotWx=secs('fRotW',10);
+  if(S.rotWx>0&&!oldWx)WX=null;
   var ak=$('fAdb').value.trim();if(ak!==S.adbKey){S.adbKey=ak;svcPause(SVC_BY.adb,0,'');SVR.adb={};saveSvcR();}
   var lk=$('fAl').value.trim();if(lk!==S.alKey){S.alKey=lk;svcPause(SVC_BY.airlabs,0,'');SVR.airlabs={};saveSvcR();}
   S.alBulk=$('fAlB').checked;S.alBulkDay=Math.max(0,parseInt($('fAlBD').value,10)||0);
@@ -1280,7 +1644,8 @@ $('bSave').onclick=function(){
 
 function start(){
   $('place').textContent=S.name||'Overhead';
-  tickClock();updateSky();keepAwake();loadAirports();loadShapeIndex();renderPanel();poll();
+  if(WX&&(WX.lat!==S.lat||WX.lon!==S.lon))WX=null;
+  tickClock();updateSky();keepAwake();loadAirports();loadShapeIndex();renderPanel();poll();wxFetch();
 }
 if(S.lat==null||isNaN(S.lat)){tickClock();openSettings();}else start();
 })();
