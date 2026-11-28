@@ -56,6 +56,8 @@ html,body{height:100%;background:#03050a;color:var(--text);font-family:Roboto,"S
 #flight{font-size:9.6vh;font-weight:800;letter-spacing:.04em;line-height:1.05;color:#fff;text-shadow:0 0 2.6vh rgba(var(--brandRGB),.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tags{display:flex;flex-direction:column;align-items:flex-end;gap:1vh;padding-top:.6vh;flex:0 0 auto}
 #distPill{font-size:2.5vh;font-weight:800;letter-spacing:.12em;color:var(--text);background:rgba(255,255,255,.1);padding:.7vh 1.8vh;border-radius:1.4vh;white-space:nowrap}
+#milTag{display:none;font-size:2.4vh;font-weight:800;letter-spacing:.16em;color:#14180a;background:#a3b86c;padding:.6vh 1.6vh;border-radius:1.2vh;box-shadow:0 0 2vh rgba(163,184,108,.6)}
+.miltag{display:inline-block;vertical-align:middle;margin-left:1.2vh;font-size:2vh;font-weight:800;letter-spacing:.12em;color:#14180a;background:#a3b86c;padding:.2vh .9vh;border-radius:.8vh}
 #distPill.oh{color:#04110b;background:var(--ok);box-shadow:0 0 2.4vh var(--ok);animation:pulse 1.4s infinite}
 @keyframes pulse{50%{opacity:.5}}
 #tracked{font-size:2.6vh;color:var(--dim);white-space:nowrap}
@@ -207,7 +209,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
         <div id="cardTop">
           <div id="cardMain">
             <div id="airRow"><img id="logo" alt=""><div id="airTxt"><div id="airline">&nbsp;</div><div id="flight">&mdash;</div></div>
-              <div id="tags"><span id="distPill"></span><span id="tracked"></span><span id="pIdx"></span></div></div>
+              <div id="tags"><span id="milTag">MILITARY</span><span id="distPill"></span><span id="tracked"></span><span id="pIdx"></span></div></div>
             <div id="route">
               <div class="ap"><div class="code" id="oCode">---</div><div class="city" id="oCity">&nbsp;</div></div>
               <div id="track"><div id="trackLine"><div id="trackFill"></div>
@@ -247,7 +249,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
           <div class="tile"><div class="k"><span class="ic" data-ic="target"></span>CLOSEST TODAY</div><div class="b"><span class="v" id="nC"></span><span class="s" id="nCs"></span></div></div>
         </div></div>
       <div class="col" id="dayCol"><div class="h2" style="color:#f6a24a">TODAY <span>&middot; since midnight</span></div>
-        <div class="drow"><span class="ic" data-ic="cal"></span><div class="t"><div class="k">AIRCRAFT SEEN</div><div class="v" id="dSeen" style="font-size:7vh;font-weight:700"></div></div><div id="bars"></div></div>
+        <div class="drow"><span class="ic" data-ic="cal"></span><div class="t"><div class="k">AIRCRAFT SEEN</div><div class="v" id="dSeen" style="font-size:7vh;font-weight:700"></div><div class="s" id="dMil" style="text-align:left;color:#a3b86c"></div></div><div id="bars"></div></div>
         <div class="drow"><span class="ic" data-ic="medal"></span><div class="t"><div class="k">TOP AIRLINE</div><div class="v" id="dAir"></div><div class="s" id="dAirN" style="text-align:left"></div></div><img id="dAirLogo" alt=""></div>
         <div class="drow"><span class="ic" data-ic="plane"></span><div class="t"><div class="k">TOP AIRCRAFT TYPE</div><div class="v" id="dTy"></div></div><span class="s" id="dTyN"></span></div>
         <div class="drow"><span class="ic" data-ic="dep"></span><div class="t"><div class="k">TOP DEPARTURE</div><div class="v" id="dOr"></div></div><span class="s" id="dOrN"></span></div>
@@ -344,7 +346,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.28.1210';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.1222';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true,perVisit:3};
@@ -542,6 +544,7 @@ function ingest(list){
     p.desc=a.desc||p.desc||'';
     p.own=a.ownOp||p.own||'';
     p.sq=a.squawk||p.sq||'';
+    p.mil=p.mil||!!((a.dbFlags|0)&1)||/UNITED STATES (AIR FORCE|ARMY|NAVY|MARINE)|\bUSAF\b|NATIONAL GUARD|DEPT OF DEFENSE/.test((p.own||'').toUpperCase());   // dbFlags bit 1 = military (adsb.lol / adsb.fi database)
     p.ground=ground;
     p.alt=ground?0:(typeof a.alt_baro==='number'?a.alt_baro:(typeof a.alt_geom==='number'?a.alt_geom:null));
     p.gs=typeof a.gs==='number'?a.gs:null;
@@ -1099,6 +1102,7 @@ function drawRadar(arr,now){
     // glow halo
     c.fillStyle=col;c.globalAlpha=sel?0.22:0.14;c.beginPath();c.arc(xy[0],xy[1],u*(sel?5:3.2),0,Math.PI*2);c.fill();c.globalAlpha=1;
     c.save();c.translate(xy[0],xy[1]);
+    if(p.mil){c.save();c.rotate(Math.PI/4);c.strokeStyle=MIL;c.lineWidth=u*0.45;c.globalAlpha=.95;var m=u*3.4;c.strokeRect(-m,-m,m*2,m*2);c.restore();}
     if(sel){
       var pr=S.anim?Math.sin(now/280)*0.7:0;
       c.strokeStyle='rgba(255,255,255,.9)';c.lineWidth=u*0.4;c.beginPath();c.arc(0,0,u*(5.6+pr),0,Math.PI*2);c.stroke();
@@ -1212,6 +1216,7 @@ function setBrand(hex){
   var rgb=hexRGB(hex),st=document.documentElement.style;
   st.setProperty('--brand',hex);st.setProperty('--brandRGB',rgb.join(','));
 }
+var MIL='#a3b86c';   // military accent (olive)
 var lastLogo='',rsrcTxt='';
 function renderPanel(){
   var now=Date.now(),arr=currentList(now);
@@ -1231,9 +1236,9 @@ function renderPanel(){
   if(p){
     if(p.hex!==shownHex){var card=$('card');card.classList.remove('swap');void card.offsetWidth;card.classList.add('swap');shownHex=p.hex;}
     var RI=routeInfo(p,true),ai=airlineInfo(p,RI.rt);
-    setBrand(ai.brand);setCardShape(p,ai.brand);
+    var bc=p.mil&&ai.brand==='#ffb020'?MIL:ai.brand;setBrand(bc);$('milTag').style.display=p.mil?'block':'none';setCardShape(p,bc);
     var own=ai.name?'':ownerLabel(ownerFor(p,true));
-    $('airline').textContent=ai.name||own||(p.cs?'Private / unknown operator':'No callsign');
+    $('airline').textContent=ai.name||own||(p.mil?'Military':(p.cs?'Private / unknown operator':'No callsign'));
     $('flight').textContent=p.cs||p.reg||p.hex.toUpperCase();
     var logo=ai.iata?'https://images.kiwi.com/airlines/128/'+ai.iata+'.png':'';
     if(logo!==lastLogo){lastLogo=logo;var im=$('logo');im.style.display='none';if(logo){im.onload=function(){im.style.display='block';};im.onerror=function(){im.style.display='none';};im.src=logo;}}
@@ -1277,7 +1282,7 @@ function renderPanel(){
     if(sel&&selLeg&&selLeg.o&&selLeg.d)sub+=' · '+selLeg.o+' → '+selLeg.d;
     var va=x.ground?'':(x.vr>350?' ▲':(x.vr<-350?' ▼':''));
     return '<div class="row'+(sel?' sel':'')+'" data-hex="'+esc(x.hex)+'"><span class="dot" style="background:'+col+';box-shadow:0 0 1vh '+col+'"></span>'+
-      '<div class="mid"><div class="cs">'+esc(x.cs||x.reg||x.hex.toUpperCase())+'</div><div class="ty">'+esc(sub)+'</div></div>'+
+      '<div class="mid"><div class="cs">'+esc(x.cs||x.reg||x.hex.toUpperCase())+(x.mil?'<span class="miltag">MIL</span>':'')+'</div><div class="ty">'+esc(sub)+'</div></div>'+
       '<div class="rt"><div class="di">'+(x.d<10?x.d.toFixed(1):Math.round(x.d))+' mi '+compass(x.b)+'</div><div class="al">'+(x.ground?'On ground':(x.alt==null?'–':fmtInt(x.alt)+'′'+va))+'</div></div></div>';
   }).join('');
   if(!S.fiaKey)arr.filter(function(x){return x.hex!==selectedHex;}).slice(0,4).forEach(function(x){routeFor(x.cs);});
@@ -1538,6 +1543,7 @@ function tally(now){
       var ai=airlineInfo(p,null);if(ai.name){T.al[ai.name]=(T.al[ai.name]||0)+1;(T.alCode=T.alCode||{})[ai.name]=(p.cs||'').slice(0,3);}
       var tn=typeName(p);if(tn&&tn!=='Unknown')T.ty[tn]=(T.ty[tn]||0)+1;
     }
+    if(p.mil&&!(T.milSeen=T.milSeen||{})[hex]){T.milSeen[hex]=1;T.mil=(T.mil||0)+1;todayDirty=true;}
     if(!p.ground){var d=distMi(S.lat,S.lon,p.lat,p.lon);if(!T.close||d<T.close.d){T.close={d:d,cs:p.cs||p.reg||hex.toUpperCase(),t:now};todayDirty=true;}}
   }
   saveToday();
@@ -1561,7 +1567,8 @@ function setT(id,v,sub){$(id).textContent=v;$(id+'s').innerHTML=sub||'';}
 function renderStats(arr,now){
   var air=arr.filter(function(p){return !p.ground;}),T=today(),i;
   $('nowSub').textContent='· within '+S.radius+' mi';
-  setT('nN',arr.length,arr.length-air.length?(arr.length-air.length)+' on ground':(air.length?'all airborne':''));sparkSvg('nNg','n');trend('nNb','n');
+  var nm=arr.filter(function(p){return p.mil;}).length;
+  setT('nN',arr.length,nm?'<span style="color:#a3b86c">'+nm+' military</span>':(arr.length-air.length?(arr.length-air.length)+' on ground':(air.length?'all airborne':'')));sparkSvg('nNg','n');trend('nNb','n');
   var names={},nl=[];air.forEach(function(p){var n=airlineInfo(p,null).name;if(n&&!names[n]){names[n]=1;nl.push(n);}});
   setT('nA',nl.length,esc(nl.slice(0,2).join(' · ')));sparkSvg('nAg','a');trend('nAb','a');
   function who(p){return esc(p.cs||p.reg||p.hex.toUpperCase())+'<br>'+esc(p.type||'');}
@@ -1574,7 +1581,7 @@ function renderStats(arr,now){
   }else{setT('nNe','–','');setT('nH','–','');setT('nF','–','');}
   if(T.close)setT('nC',(T.close.d<10?T.close.d.toFixed(1):Math.round(T.close.d))+' mi',esc(T.close.cs)+'<br>'+clockTxt(T.close.t));
   else setT('nC','–',DEMO?'not counted in demo':'');
-  $('dSeen').textContent=T.n;
+  $('dSeen').textContent=T.n;$('dMil').textContent=T.mil?'incl. '+T.mil+' military':'';
   var mx=1,h=new Date(now).getHours(),bh='';for(i=0;i<24;i++)mx=Math.max(mx,T.hours[i]||0);
   for(i=0;i<24;i++)bh+='<i class="'+(i===h?'now':(i<h?'past':''))+'" style="height:'+Math.round(((T.hours[i]||0)/mx)*100)+'%"></i>';
   $('bars').innerHTML=bh;
