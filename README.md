@@ -51,6 +51,8 @@ Closest plane is skipped when nothing is in range, Weather until it has loaded. 
   the registration / tail number), card plane only.
   Per their terms the reply is cached at most 24 h, the image loads straight from their URL (never stored), the
   photographer is credited and the photo links to its page. No photo -> the tinted silhouette.
+  Planespotters only answers lookups from a real web page, so when the Echo (running as a local file) is refused,
+  the lookup goes through `photo-helper.html` on this GitHub Pages site. Settings shows which route is in use and the last error.
 - Weather: [Open-Meteo](https://open-meteo.com/) (free, no key, CC BY 4.0), once every 30 minutes.
 - Stats: counted on the device from the plane data it already receives (no extra lookups), reset at midnight.
 - Airport coordinates: `airports.json`, built from OurAirports (public domain) by `tools/mk_airports.py`.

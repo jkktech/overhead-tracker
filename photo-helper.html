@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Overhead photo helper</title>
+</head>
+<body>
+<script>
+/* Overhead photo helper.
+   The Echo runs Overhead as a local file (file://), and planespotters.net only answers photo
+   lookups that come from a real web page. The tracker loads this page from GitHub Pages in a
+   hidden frame and asks it, by postMessage, to look up a photo by hex or registration.
+   It only ever calls the public planespotters.net photo API and only returns its JSON reply;
+   images are still loaded by the tracker straight from planespotters' own URLs. */
+(function(){
+  'use strict';
+  var API='https://api.planespotters.net/pub/photos/';
+  window.addEventListener('message',function(e){
+    var d=e.data;
+    if(!d||d.type!=='ps'||typeof d.path!=='string'||!/^(hex|reg)\/[A-Za-z0-9-]{1,12}$/.test(d.path))return;
+    var src=e.source;
+    function reply(o){o.type='ps';o.id=d.id;try{src.postMessage(o,'*');}catch(x){}}
+    fetch(API+d.path,{headers:{'Accept':'application/json'}}).then(function(r){
+      if(!r.ok)return reply({ok:false,status:r.status});
+      return r.json().then(function(j){reply({ok:true,j:j});});
+    }).catch(function(){reply({ok:false,status:0});});
+  });
+  try{parent.postMessage({type:'ps-ready'},'*');}catch(x){}
+})();
+</script>
+</body>
+</html>

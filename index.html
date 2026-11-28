@@ -306,7 +306,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
     </div>
     <div style="grid-column:1/-1"><label class="chk" style="margin-top:0"><input id="fRot" type="checkbox">Rotate screens automatically (tap a dot at the bottom to jump; tapping the screen pauses for 60 s)</label>
       <div style="display:flex;gap:2vh;margin-top:.8vh;flex-wrap:wrap"><label style="flex:1">Closest plane (seconds, 0 = hide)<input id="fRotP" type="number" min="0" max="300"></label><label style="flex:1">Radar<input id="fRotR" type="number" min="0" max="300"></label><label style="flex:1">Stats<input id="fRotS" type="number" min="0" max="300"></label><label style="flex:1">Weather (Open-Meteo)<input id="fRotW" type="number" min="0" max="300"></label></div>
-      <label class="chk"><input id="fPh" type="checkbox">Aircraft photos from planespotters.net (falls back to the silhouette)</label></div>
+      <label class="chk"><input id="fPh" type="checkbox">Aircraft photos from planespotters.net (falls back to the silhouette)</label><div id="phStat" style="font-size:2.3vh;color:var(--dim);margin-top:.6vh"></div></div>
     <div>
       <label class="chk"><input id="fDim" type="checkbox">Dim screen at night</label>
       <label class="chk"><input id="fGround" type="checkbox">Show planes on the ground</label>
@@ -324,7 +324,7 @@ input[type=checkbox]{width:auto;transform:scale(1.6);margin-right:1.8vh}
 <script>
 (function(){
 'use strict';
-var APP_VERSION='2026.11.27.2355';   // bump this (and version.json) on every release
+var APP_VERSION='2026.11.28.0001';   // bump this (and version.json) on every release
 
 /* ---------------- settings ---------------- */
 var DEFAULTS={fiaKey:'',fiaCap:290000,alKey:'',alDay:3,alMonth:950,alBulk:true,alBulkDay:30,setVer:0,adbKey:'',adbDay:6,adbMonth:190,name:'',lat:null,lon:null,radius:15,refresh:10,source:'auto',custom:'',ground:false,alertMi:1.5,anim:true,chime:false,dim:false,sat:45,rotate:true,rotPlane:12,rotRadar:12,rotStats:10,rotWx:10,photos:true};
@@ -1344,39 +1344,85 @@ function rotTick(now){
    cached up to 24 h, the image is always loaded straight from their URL (never stored), the
    photographer is credited next to it and the photo links to its planespotters.net page. */
 var PH={};try{PH=JSON.parse(localStorage.getItem('overhead.photos')||'{}')||{};}catch(e){PH={};}
-var phBusy=false,phFail=0,phPauseUntil=0;
+var phBusy=false,phFail=0,phPauseUntil=0,phErr='',phVia='direct';
 function savePH(){
   try{var k=Object.keys(PH);if(k.length>300)k.sort(function(a,b){return PH[a].t-PH[b].t;}).slice(0,k.length-250).forEach(function(x){delete PH[x];});
     localStorage.setItem('overhead.photos',JSON.stringify(PH));}catch(e){}
 }
+/* When Overhead runs as a local file (the Echo's loader), planespotters.net may refuse the lookup because
+   it doesn't come from a web page. Then the lookup goes through photo-helper.html, a tiny page on this
+   project's GitHub Pages site that asks the same public API from a real web address. */
+var helperReady=null,helperSeq=0,helperCb={};
+function helperBase(){return LOADER_BASE||(location.protocol==='file:'?'https://jkktech.github.io/overhead-tracker/':'');}
+function helper(){
+  if(helperReady)return helperReady;
+  helperReady=new Promise(function(res,rej){
+    var f=document.createElement('iframe');f.style.display='none';f.setAttribute('aria-hidden','true');
+    var t=setTimeout(function(){helperReady=null;if(f.parentNode)f.parentNode.removeChild(f);rej(new Error('photo helper did not load'));},15000);
+    window.addEventListener('message',function(e){
+      var d=e.data;if(!d||e.source!==f.contentWindow)return;
+      if(d.type==='ps-ready'){clearTimeout(t);res(f);}
+      else if(d.type==='ps'&&helperCb[d.id]){helperCb[d.id](d);delete helperCb[d.id];}
+    });
+    f.src=helperBase()+'photo-helper.html?v='+encodeURIComponent(APP_VERSION);
+    document.body.appendChild(f);
+  });
+  return helperReady;
+}
+function helperGet(path){
+  return helper().then(function(f){return new Promise(function(res,rej){
+    var id=++helperSeq,t=setTimeout(function(){delete helperCb[id];var e=new Error('timed out');e.name='AbortError';rej(e);},10000);
+    helperCb[id]=function(d){clearTimeout(t);if(d.ok)res(d.j);else{var e=new Error('HTTP '+d.status);if(d.status)e.status=d.status;rej(e);}};
+    f.contentWindow.postMessage({type:'ps',id:id,path:path},'*');
+  });});
+}
+function psGet(path){
+  if(phVia==='helper')return helperGet(path);
+  return fetchJSON('https://api.planespotters.net/pub/photos/'+path,8000).catch(function(e){
+    if(helperBase()&&e.status!==429&&e.name!=='AbortError'){phVia='helper';return helperGet(path);}   // refused or blocked: use the helper from now on
+    throw e;
+  });
+}
 function photoFor(p){
   var c=PH[p.hex];
-  if(c&&Date.now()-c.t<24*3600e3)return c.ph||null;
-  if(phBusy||Date.now()<phPauseUntil)return undefined;
+  if(c&&Date.now()-c.t<(c.ttl||24*3600e3))return c.ph||null;
+  if(Date.now()<phPauseUntil)return null;
+  if(phBusy)return undefined;
   phBusy=true;
-  var PSAPI='https://api.planespotters.net/pub/photos/',reg=(p.reg||'').trim();
-  fetchJSON(PSAPI+'hex/'+encodeURIComponent(p.hex),8000).then(function(j){
+  var reg=(p.reg||'').trim().toUpperCase(),hex=p.hex;
+  psGet('hex/'+encodeURIComponent(hex)).then(function(j){
     // by transponder hex (tied to the airframe); if that finds nothing, try the registration / tail number
-    if(j&&j.photos&&j.photos.length||!reg)return j;
-    return fetchJSON(PSAPI+'reg/'+encodeURIComponent(reg),8000);
+    if(j&&j.photos&&j.photos.length||!/^[A-Z0-9-]{2,12}$/.test(reg))return j;
+    return psGet('reg/'+encodeURIComponent(reg));
   }).then(function(j){
     var x=j&&j.photos&&j.photos[0],tl=x&&(x.thumbnail_large||x.thumbnail);
-    PH[p.hex]={t:Date.now(),ph:tl&&tl.src&&x.link?{src:tl.src,link:x.link,by:x.photographer||''}:null};phFail=0;savePH();
-  },function(){if(++phFail>=3){phFail=0;phPauseUntil=Date.now()+6*3600e3;}}).then(function(){phBusy=false;renderPanel();});
+    PH[hex]={t:Date.now(),ph:tl&&tl.src&&x.link?{src:tl.src,link:x.link,by:x.photographer||''}:null};phFail=0;phErr='';savePH();
+  },function(e){
+    phErr=why(e)+(phVia==='helper'?' via helper':'');
+    PH[hex]={t:Date.now(),ttl:20*60e3,ph:null,err:phErr};          // don't retry this plane for 20 min
+    if(++phFail>=3){phFail=0;phPauseUntil=Date.now()+3600e3;}      // 3 failures in a row: rest for an hour
+  }).then(function(){phBusy=false;renderPanel();});
   return undefined;
 }
 var phShown='';
 function renderPhoto(p){
-  var ph=(S.photos&&!DEMO)?photoFor(p):null,lk=$('phLink'),im=$('phImg');
+  var on=S.photos&&!DEMO,ph=on?photoFor(p):null,lk=$('phLink'),im=$('phImg'),c=PH[p.hex];
   if(ph){
-    if(phShown!==ph.src){phShown=ph.src;im.onerror=function(){if(PH[p.hex])PH[p.hex].ph=null;phShown='';lk.style.display='none';$('cardShape').style.visibility='';};im.src=ph.src;}
+    if(phShown!==ph.src){phShown=ph.src;im.onerror=function(){if(PH[p.hex]){PH[p.hex].ph=null;PH[p.hex].ttl=20*60e3;PH[p.hex].err='image would not load';}phShown='';renderPanel();};im.src=ph.src;}
     lk.href=ph.link;lk.style.display='block';$('cardShape').style.visibility='hidden';
     $('phCap').textContent='© '+(ph.by||'photographer')+' · planespotters.net';
   }else{
     if(phShown){phShown='';im.removeAttribute('src');}
     lk.style.display='none';$('cardShape').style.visibility='';
-    $('phCap').textContent=ph===undefined?'Looking for a photo…':(S.photos&&!DEMO?'No photo found · ':'')+typeName(p)+' silhouette';
+    var why2=c&&c.err?c.err:(Date.now()<phPauseUntil?phErr:'');
+    $('phCap').textContent=ph===undefined?'Looking for a photo…':
+      (!on?'':(why2?'Photo lookup failed ('+why2+') · ':'No photo found · '))+typeName(p)+' silhouette';
   }
+}
+function photoStatus(){
+  if(!S.photos)return 'Photos off.';
+  return 'Photos: '+(phVia==='helper'?'via the GitHub Pages helper (direct lookups were refused)':'direct')+
+    (phErr?' · last error: '+phErr:'')+(Date.now()<phPauseUntil?' · resting until '+clockTxt(phPauseUntil):'');
 }
 
 /* ---------------- today's stats (counted on this device, reset at midnight) ---------------- */
@@ -1625,7 +1671,7 @@ $('ver').textContent='v'+APP_VERSION+(LOADER_BASE?' (via loader)':'');
 function openSettings(){
   $('fName').value=S.name||'';$('fLat').value=S.lat==null?'':S.lat;$('fLon').value=S.lon==null?'':S.lon;
   $('fRad').value=S.radius;$('fRef').value=S.refresh;$('fSrc').value=S.source;$('fCustom').value=S.custom||'';$('fGround').checked=!!S.ground;
-  $('fAlert').value=S.alertMi;$('fRot').checked=!!S.rotate;$('fRotP').value=S.rotPlane;$('fRotR').value=S.rotRadar;$('fRotS').value=S.rotStats;$('fRotW').value=S.rotWx;$('fPh').checked=!!S.photos;$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
+  $('fAlert').value=S.alertMi;$('fRot').checked=!!S.rotate;$('fRotP').value=S.rotPlane;$('fRotR').value=S.rotRadar;$('fRotS').value=S.rotStats;$('fRotW').value=S.rotWx;$('fPh').checked=!!S.photos;$('phStat').textContent=photoStatus();$('fAnim').checked=!!S.anim;$('fChime').checked=!!S.chime;$('fDim').checked=!!S.dim;$('fSat').value=S.sat;$('fFia').value=S.fiaKey||'';$('fAdb').value=S.adbKey||'';$('fAdbD').value=S.adbDay;$('fAdbM').value=S.adbMonth;
   $('fAl').value=S.alKey||'';$('fAlD').value=S.alDay;$('fAlM').value=S.alMonth;$('fAlB').checked=!!S.alBulk;$('fAlBD').value=S.alBulkDay;
   var su=svcU('airlabs');$('alSnapStat').textContent=S.alKey&&S.alBulk?('Snapshots today '+(su.bn||0)+' / '+S.alBulkDay+(ALSNAP?' \u00b7 last at '+new Date(ALSNAP.t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+', '+ALSNAP.n+' flights with routes':' \u00b7 none yet')):'';
   svcUsable(SVC_BY.airlabs);svcUsable(SVC_BY.adb);$('alStat').textContent=svcStatusText(SVC_BY.airlabs);$('adbStat').textContent=svcStatusText(SVC_BY.adb);
@@ -1656,6 +1702,7 @@ $('bSave').onclick=function(){
   var al=parseFloat($('fAlert').value);S.alertMi=isNaN(al)?1.5:Math.max(0,Math.min(10,al));
   S.anim=$('fAnim').checked;S.chime=$('fChime').checked;S.dim=$('fDim').checked;
   S.rotate=$('fRot').checked;S.photos=$('fPh').checked;
+  for(var hx in PH)if(PH[hx].err)delete PH[hx];phPauseUntil=0;phFail=0;
   function secs(id,d){var v=parseInt($(id).value,10);return isNaN(v)?d:Math.max(0,Math.min(300,v));}
   var oldWx=S.rotWx;S.rotPlane=secs('fRotP',12);S.rotRadar=secs('fRotR',12);S.rotStats=secs('fRotS',10);S.rotWx=secs('fRotW',10);
   if(S.rotWx>0&&!oldWx)WX=null;
