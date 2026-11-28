@@ -30,8 +30,8 @@ starts, so restart Fully Kiosk (or reboot) after pushing. Supported keys include
 
 ## Screens
 The display rotates through four screens: **Closest plane** (12 s) -> **Radar** (12 s) -> **Stats** (10 s) -> **Weather** (10 s).
-Tap a dot at the bottom to jump to a screen; tapping the screen pauses the rotation for 60 seconds. Tapping a plane on the
-radar or in its list opens it on the Closest plane screen. Times (0 = hide a screen), rotation and photos are in Settings.
+Swipe left/right or tap a dot at the bottom to change screens; that (or tapping the screen) pauses the rotation for 30 seconds,
+and **▶ Resume** at the bottom right restarts it right away. Tapping a plane on the radar or in its list opens it on the Closest plane screen. Times (0 = hide a screen), rotation and photos are in Settings.
 Closest plane is skipped when nothing is in range, Weather until it has loaded. "LOOK UP!" still takes over the screen.
 
 ## Data sources
@@ -47,7 +47,8 @@ Closest plane is skipped when nothing is in range, Weather until it has loaded. 
   4. Free community route DB (only when FlyItalyADSB isn't available)
   5. Otherwise "Route unknown" - no guessing.
 - Owner of private/GA/medical/government aircraft: free adsbdb aircraft lookup (card plane only, cached 30 days), tagged Air ambulance / Police / Military.
-- Aircraft photos: [planespotters.net](https://www.planespotters.net/photo/api) public photo API, by transponder hex, card plane only.
+- Aircraft photos: [planespotters.net](https://www.planespotters.net/photo/api) public photo API, by transponder hex (falls back to
+  the registration / tail number), card plane only.
   Per their terms the reply is cached at most 24 h, the image loads straight from their URL (never stored), the
   photographer is credited and the photo links to its page. No photo -> the tinted silhouette.
 - Weather: [Open-Meteo](https://open-meteo.com/) (free, no key, CC BY 4.0), once every 30 minutes.
